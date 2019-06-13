@@ -9,7 +9,7 @@
                  [samsara/trackit-core "0.9.0"]
 
                  [com.brunobonacci/safely "0.5.0-alpha6"]
-                 [com.brunobonacci/oneconfig "0.9.2"
+                 [com.brunobonacci/oneconfig "0.10.1"
                   :exclusions [samsara/trackit-core]]
 
                  [fundingcircle/jackdaw "0.6.4"]

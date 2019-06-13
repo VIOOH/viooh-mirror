@@ -1,4 +1,5 @@
 (ns viooh.mirror.main
+  (:gen-class)
   (:require [viooh.mirror.mirror :refer [start-mirror]]
             [com.brunobonacci.oneconfig :refer [configure]]
             [clojure.tools.logging :as log]
