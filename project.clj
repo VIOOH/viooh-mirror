@@ -1,4 +1,4 @@
-(defproject viooh-mirror (-> "resources/version" slurp .trim)
+(defproject viooh-mirror (-> "resources/viooh-mirror.version" slurp .trim)
   :description "Utility to mirror kafka topics across clusters"
   :url "https://github.com/VIOOH/viooh-mirror"
   :dependencies [[org.clojure/clojure "1.10.0"]
