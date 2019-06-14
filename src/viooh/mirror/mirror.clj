@@ -22,6 +22,7 @@
              {:group.id group-id
               :auto.offset.reset "earliest"
               :enable.auto.commit false})
+      (update :max.partition.fetch.bytes int)
       stringify-keys
       (k/consumer (s/serdes serdes cfg))))
 
