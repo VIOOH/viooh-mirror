@@ -23,6 +23,7 @@
               :auto.offset.reset "earliest"
               :enable.auto.commit false})
       (update :max.partition.fetch.bytes int)
+      (update :max.poll.records int)
       stringify-keys
       (k/consumer (s/serdes serdes cfg))))
 
