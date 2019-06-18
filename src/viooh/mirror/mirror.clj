@@ -18,14 +18,12 @@
   `auto.offset.reset` is defaulted to earliest.`serde` are configured
   as per the viooh.mirror.serde namespace."
   [group-id cfg serdes]
-  (-> (merge (:kafka cfg)
-             {:group.id group-id
-              :auto.offset.reset "earliest"
-              :enable.auto.commit false})
-      (update :max.partition.fetch.bytes int)
-      (update :max.poll.records int)
-      stringify-keys
-      (k/consumer (s/serdes serdes cfg))))
+  (let [default-cfg {:auto.offset.reset "earliest"
+                     :group.id group-id}
+        fixed-cfg   {:enable.auto.commit false}]
+    (-> (merge default-cfg (:kafka cfg) fixed-cfg)
+        stringify-keys
+        (k/consumer (s/serdes serdes cfg)))))
 
 
 
