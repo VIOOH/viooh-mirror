@@ -13,7 +13,7 @@
                  [fundingcircle/jackdaw "0.6.4"]
                  ;;logging madness
                  [com.taoensso/timbre "4.10.0"]
-                 [org.clojure/tools.logging "0.3.1"]
+                 [timbre-ns-pattern-level "0.1.2"]
                  [com.fzakaria/slf4j-timbre "0.3.6"]
                  [org.slf4j/log4j-over-slf4j "1.7.14"]
                  [org.slf4j/jul-to-slf4j "1.7.14"]

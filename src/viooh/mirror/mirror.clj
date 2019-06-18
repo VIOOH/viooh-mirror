@@ -3,7 +3,7 @@
             [viooh.mirror.serde :as s]
             [clojure.walk :refer [stringify-keys]]
             [safely.core :refer [safely]]
-            [clojure.tools.logging :as log]
+            [taoensso.timbre :as log]
             [clojure.string :as str])
   (:import [org.apache.kafka.clients.consumer KafkaConsumer]
            [org.apache.kafka.clients.producer KafkaProducer]

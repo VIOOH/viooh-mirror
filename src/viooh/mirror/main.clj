@@ -2,9 +2,11 @@
   (:gen-class)
   (:require [viooh.mirror.mirror :refer [start-mirror]]
             [com.brunobonacci.oneconfig :refer [configure]]
-            [clojure.tools.logging :as log]
+            [taoensso.timbre :as log]
+            [timbre-ns-pattern-level :as timbre-ns-pattern-level]
             [clojure.string :as str]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.tools.reader.edn :as edn]))
 
 
 
@@ -93,13 +95,20 @@
           (start-mirror group-id-prefix serdes mirror))
         mirrors)))
 
-
+(defn setup-logging
+  []
+  (let [conf (-> (io/resource "logging-config.edn")
+                 slurp
+                 (edn/read-string)
+                 (merge (when (= "dev" (:env (env)))
+                          {"viooh.*" :debug})))]
+    (log/merge-config! {:middleware [(timbre-ns-pattern-level/middleware conf)]})))
 
 (defn -main
   [& args]
 
   (print-vanity-title)
-
+  (setup-logging)
   (let [cfg (:value (configure {:key (config-key) :env (env) :version (version)}))]
     (start cfg)))
 
@@ -109,9 +118,7 @@
 
 
   (def mirrors
-    (let [cfg (-> (configure {:key (config-key) :env (env) :version (version)})
-              :value)]
-      (start cfg)))
+    (-main))
 
   (stop-all mirrors)
 
