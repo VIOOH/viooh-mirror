@@ -100,8 +100,10 @@
   (let [conf (-> (io/resource "logging-config.edn")
                  slurp
                  (edn/read-string)
-                 (merge (when (= "dev" (:env (env)))
-                          {"viooh.*" :debug})))]
+                 (merge (when (= "dev" (env))
+                          {"viooh.*" :debug
+                           "org.apache.kafka.*" :info})))]
+    (log/info "config:" conf)
     (log/merge-config! {:middleware [(timbre-ns-pattern-level/middleware conf)]})))
 
 (defn -main

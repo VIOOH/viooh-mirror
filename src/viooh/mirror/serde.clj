@@ -1,29 +1,24 @@
 (ns viooh.mirror.serde
   (:require [jackdaw.serdes :refer [string-serde]]
-            [jackdaw.serdes.avro.schema-registry :as sr])
+            [safely.core :refer [safely]]
+            [jackdaw.serdes.avro.schema-registry :as sr]
+            [clojure.set :refer [difference union]])
   (:import [io.confluent.kafka.serializers KafkaAvroDeserializer KafkaAvroSerializer]
-           org.apache.kafka.common.serialization.Serdes))
-
-
+           [org.apache.kafka.common.serialization Serdes]))
 
 (defn- avro-serializer
-  [{:keys [schema-registry-url max-capacity]}]
-  (KafkaAvroSerializer.
-   (sr/client schema-registry-url (or max-capacity 128))
-   {"auto.register.schemas" true
-    "schema.registry.url" schema-registry-url}))
+  [schema-registry]
+  (KafkaAvroSerializer. schema-registry))
 
 
 
 (defn- avro-deserializer
-  [{:keys [schema-registry-url max-capacity]}]
-  (KafkaAvroDeserializer.
-   (sr/client schema-registry-url (or max-capacity 128))))
+  [schema-registry]
+  (KafkaAvroDeserializer. schema-registry))
 
 
 
 (defmulti serde (fn [type config] type))
-
 
 
 (defmethod serde :string
@@ -31,15 +26,13 @@
   (string-serde))
 
 
-
 (defmethod serde :avro
-  [_ config]
-  (Serdes/serdeFrom (avro-serializer config)
-                    (avro-deserializer config)))
-
+  [_ schema-registry]
+  (Serdes/serdeFrom (avro-serializer schema-registry)
+                    (avro-deserializer schema-registry)))
 
 
 (defn serdes
-  [[key-serde value-serde] config]
-  {:key-serde (serde key-serde config)
-   :value-serde (serde value-serde config)})
+  [[key-serde value-serde] schema-registry]
+  {:key-serde (serde key-serde schema-registry)
+   :value-serde (serde value-serde schema-registry)})

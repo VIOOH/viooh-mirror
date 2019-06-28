@@ -1,6 +1,7 @@
 (defproject viooh-mirror (-> "resources/viooh-mirror.version" slurp .trim)
   :description "Utility to mirror kafka topics across clusters"
   :url "https://github.com/VIOOH/viooh-mirror"
+  :repositories [["confluent" {:url "https://packages.confluent.io/maven/"}]]
   :dependencies [[org.clojure/clojure "1.10.0"]
 
                  [com.taoensso/encore "2.112.0"]
@@ -11,6 +12,8 @@
                   :exclusions [samsara/trackit-core]]
 
                  [fundingcircle/jackdaw "0.6.4"]
+                 [io.confluent/kafka-schema-registry-client "5.1.2"
+                  :exclusions [com.fasterxml.jackson.core/jackson-databind]]
                  ;;logging madness
                  [com.taoensso/timbre "4.10.0"]
                  [timbre-ns-pattern-level "0.1.2"]
