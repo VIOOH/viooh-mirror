@@ -6,6 +6,10 @@
 
                  [com.taoensso/encore "2.112.0"]
                  [samsara/trackit-core "0.9.0"]
+                 [integrant "0.7.0"]
+                 [http-kit "2.3.0"]
+                 [metosin/compojure-api "1.1.11"]
+                 [org.flatland/ordered "1.5.7"]   ;;Version pulled by compojure-api has a bug on jdk 11
 
                  [com.brunobonacci/safely "0.5.0-alpha6"]
                  [com.brunobonacci/oneconfig "0.10.1"

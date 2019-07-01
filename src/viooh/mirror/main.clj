@@ -1,12 +1,14 @@
 (ns viooh.mirror.main
   (:gen-class)
-  (:require [viooh.mirror.mirror :refer [start-mirror]]
+  (:require [viooh.mirror.mirror :as mirror]
+            [viooh.mirror.http-server :as http-server]
             [com.brunobonacci.oneconfig :refer [configure]]
             [taoensso.timbre :as log]
             [timbre-ns-pattern-level :as timbre-ns-pattern-level]
             [clojure.string :as str]
             [clojure.java.io :as io]
-            [clojure.tools.reader.edn :as edn]))
+            [clojure.tools.reader.edn :as edn]
+            [integrant.core :as ig]))
 
 
 
@@ -74,27 +76,6 @@
       (last maps))))
 
 
-
-(defn stop-all
-  "Takes a list of stop-fns returned by the
-  `viooh.mirror.mirror/start-mirror` function. The stop-fns return a
-  promise which can be used to block until the mirrors are fully
-  stopped. This function calls all the stop-fns first to signal the
-  mirrors to stop and then derefs the promises returned to block until
-  all the mirrors have stopped."
-  [stop-fns]
-  (let [p (doall (map #(%) stop-fns))]
-    (run! deref p)))
-
-
-
-(defn start
-  [{:keys [group-id-prefix mirrors]}]
-  (doall
-   (map (fn [{:keys [serdes] :as mirror}]
-          (start-mirror group-id-prefix serdes mirror))
-        mirrors)))
-
 (defn setup-logging
   []
   (let [conf (-> (io/resource "logging-config.edn")
@@ -112,17 +93,16 @@
   (print-vanity-title)
   (setup-logging)
   (let [cfg (:value (configure {:key (config-key) :env (env) :version (version)}))]
-    (start cfg)))
+
+    (ig/init {::http-server/server {}
+              ::mirror/mirrors cfg})))
 
 
 
 (comment
 
+  (def system (-main))
 
-  (def mirrors
-    (-main))
+  (ig/halt! system)
 
-  (stop-all mirrors)
-
-  ;;
   )

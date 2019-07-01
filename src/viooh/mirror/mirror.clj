@@ -6,7 +6,8 @@
             [safely.core :refer [safely]]
             [taoensso.timbre :as log]
             [jackdaw.serdes.avro.schema-registry :as sr]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [integrant.core :as ig])
   (:import [org.apache.kafka.clients.consumer KafkaConsumer]
            [org.apache.kafka.clients.producer KafkaProducer]
            [org.apache.kafka.clients.producer
@@ -126,3 +127,18 @@
       (deliver p true))
 
     (fn [] (reset! closed? true) p)))
+
+
+
+(defmethod ig/init-key ::mirrors [_ {:keys [group-id-prefix mirrors] :as cfg}]
+  (let [stop-fns (doall
+                  (map (fn [{:keys [serdes] :as mirror}]
+                         (start-mirror group-id-prefix serdes mirror))
+                       mirrors))]
+    (log/info "Started all mirrors")
+    stop-fns))
+
+(defmethod ig/halt-key! ::mirrors [_ stop-fns]
+  (let [p (doall (map #(%) stop-fns))]
+    (run! deref p))
+  (log/info "Stopped all mirrors"))
