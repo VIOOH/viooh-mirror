@@ -113,15 +113,16 @@
                                                      src-topic dest-topic false)]
     (future
       (log/infof "[%s] Starting mirror" name)
-      (with-open [c (consumer group-id source src-serdes)
-                  p (producer destination dest-serdes)]
+      (safely
+       (when-not @closed?
+         (with-open [c (consumer group-id source src-serdes)
+                     p (producer destination dest-serdes)]
 
-        (safely
-         (k/subscribe c [src-topic-cfg])
-         (log/info "Subscribed to source using topic config:" src-topic-cfg)
-         (mirror group-id c p dest-topic-cfg value-schema-mirror closed?)
-         :on-error
-         :max-retry :forever))
+           (k/subscribe c [src-topic-cfg])
+           (log/info "Subscribed to source using topic config:" src-topic-cfg)
+           (mirror group-id c p dest-topic-cfg value-schema-mirror closed?)))
+       :on-error
+       :max-retry :forever)
 
       (log/infof "[%s] Stopping mirror" name)
       (deliver p true))
