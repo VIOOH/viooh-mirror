@@ -98,21 +98,25 @@
               _             (log/debug "Get All Versions Request. src-registry"
                                        "[Request subject:" src-subject "]"
                                        "[Resposne versions:" src-versions "]")
-              dest-versions (try
-                              (safely
+              dest-versions (safely
+                             (try
                                (set (.getAllVersions dest-registry dest-subject))
-                               :on-error
-                               :retryable-error? #(not (and (= (type %) RestClientException)
-                                                            (= (.getStatus %) 404)
-                                                            (= (.getErrorCode %) 40401)))
-                               :max-retry :forever
-                               :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
-                               :message (str "Unable to getAllVersions from destination registry"
-                                             " for subject:" dest-subject))
-                              (catch RestClientException rce
-                                (log/info "Destination registry does not have a registered subject:"
-                                          dest-subject " and thus no versions. Using an [] for versions")
-                                []))
+                               (catch RestClientException rce
+                                 (if (and (= (.getStatus rce) 404)
+                                          (= (.getErrorCode rce) 40401))
+                                   (do
+                                     (log/info "Destination registry does not have a registered subject:"
+                                               dest-subject " and thus no versions. Using a #{} for versions")
+                                     #{})
+                                   (throw rce))))
+                             :on-error
+                             :retryable-error? #(not (and (= (type %) RestClientException)
+                                                          (= (.getStatus %) 404)
+                                                          (= (.getErrorCode %) 40401)))
+                             :max-retry :forever
+                             :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                             :message (str "Unable to getAllVersions from destination registry"
+                                           " for subject:" dest-subject))
               _              (log/debug "Get All Versions Request. dest-registry"
                                         "[Request subject:" dest-subject "]"
                                         "[Response versions:" dest-versions "]")
