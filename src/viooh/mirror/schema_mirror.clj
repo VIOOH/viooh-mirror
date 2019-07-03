@@ -66,7 +66,9 @@
                                       "[Request subject:" dest-subject ", schema:" src-schema "]"
                                       "[Response schema-id:" dest-schema-id "]")]
       (observe-subject-version! known-schemas-subjects src-subject dest-subject
-                                src-schema-id dest-schema-id missing-version))))
+                                src-schema-id dest-schema-id missing-version)
+      (log/infof "Registration of schema at dest-registry for missing-version: %s of subject %s resulted in dest schema-id: %s"
+                 missing-version dest-subject dest-schema-id))))
 
 
 
@@ -88,6 +90,8 @@
                                "[Request subject:" src-subject ", schema:" schema "]"
                                "[Response schema-id:" schema-id "]")]
       (when-not (observed-schema-id? known-schemas-subjects schema-id)
+        (log/infof "[%s] first time observing schema-id: %s for source subject: %s and destination subject: %s"
+                   (str src-topic "-" dest-topic) schema-id src-subject dest-subject)
         (let [src-versions (safely
                             (set (.getAllVersions src-registry src-subject))
                             :on-error
@@ -121,6 +125,10 @@
                                         "[Request subject:" dest-subject "]"
                                         "[Response versions:" dest-versions "]")
               missing-versions (difference src-versions dest-versions)]
+          (log/infof (str "[%s] Comparison of subject versions for source subject: %s and destination subject: %s"
+                          " resulted in src-versions: %s  dest-versions: %s dest-missing-versions: %s")
+                     (str src-topic "-" dest-topic) src-subject dest-subject src-versions dest-versions
+                     missing-versions)
           (register-missing-versions known-schemas-subjects src-registry dest-registry src-subject
                                      dest-subject missing-versions)
           (observe-schema-id! known-schemas-subjects schema-id)))))
