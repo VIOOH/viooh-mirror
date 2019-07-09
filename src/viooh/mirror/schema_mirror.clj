@@ -39,6 +39,57 @@
            (-> (or mirrored-subject-versions {})
                (assoc version {:source-schema-id src-schema-id :destination-schema-id dest-schema-id})))))
 
+(defn ensure-subject-compatibility
+  [^CachedSchemaRegistryClient src-registry ^CachedSchemaRegistryClient dest-registry src-subject dest-subject]
+  (let [src-compatibility    (safely
+                              (try
+                                (.getCompatibility src-registry src-subject)
+                                (catch RestClientException rce
+                                  (if (and (= (.getStatus rce) 404)
+                                           (= (.getErrorCode rce) 40401))
+                                    (do
+                                      (log/info "Source registry does not have any compatiblity level for subject:"
+                                                src-subject ", falling back to source registry's global"
+                                                "compatibility.")
+                                      (.getCompatibility src-registry nil))
+                                    (throw rce))))
+                              :on-error
+                              :max-retry :forevever
+                              :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                              :message (str "Unable to get compatibility level from source registry"
+                                            "for subject:" src-subject))
+        dest-compatibility   (safely
+                              (try
+                                (.getCompatibility dest-registry dest-subject)
+                                (catch RestClientException rce
+                                  (if (and (= (.getStatus rce) 404)
+                                           (= (.getErrorCode rce) 40401))
+                                    (do
+                                      (log/info "Destination registry does not have any compatiblity level for subject:"
+                                                dest-subject)
+                                      nil)
+                                    (throw rce))))
+                              :on-error
+                              :max-retry :forevever
+                              :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                              :message (str "Unable to get compatibility level from destination registry"
+                                            "for subject:" dest-subject))]
+    (if (= src-compatibility dest-compatibility)
+      (log/info "Source subject:" src-subject " has the same compatibility:" src-compatibility
+                "as destination subject:" dest-subject)
+      (do
+        (log/info "Source subject:" src-subject " and Destination subject:" dest-subject
+                  "have DIFFERENT compatibilites source compatibility:" src-compatibility
+                  "destination compatibility:" dest-compatibility)
+        (safely
+         (.updateCompatibility dest-registry dest-subject src-compatibility)
+         :on-error
+         :max-retry :forever
+         :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+         :message (str "Unable to update the compatibility level:" src-compatibility
+                       " at destination registry for subject:" dest-subject))
+        (log/info "Updated destination compatiblity to :" src-compatibility " at destination registry for subject:" dest-subject)))))
+
 (defn register-missing-versions
   [known-schemas-subjects ^CachedSchemaRegistryClient src-registry ^CachedSchemaRegistryClient dest-registry
    src-subject dest-subject missing-versions]
@@ -129,8 +180,10 @@
                           " resulted in src-versions: %s  dest-versions: %s dest-missing-versions: %s")
                      (str src-topic "-" dest-topic) src-subject dest-subject src-versions dest-versions
                      missing-versions)
-          (register-missing-versions known-schemas-subjects src-registry dest-registry src-subject
-                                     dest-subject missing-versions)
+          (when-not (empty? missing-versions)
+            (ensure-subject-compatibility src-registry dest-registry src-subject dest-subject)
+            (register-missing-versions known-schemas-subjects src-registry dest-registry src-subject
+                                       dest-subject missing-versions))
           (observe-schema-id! known-schemas-subjects schema-id)))))
   avro-obj)
 
