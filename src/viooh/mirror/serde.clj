@@ -1,6 +1,5 @@
 (ns viooh.mirror.serde
   (:require [jackdaw.serdes :refer [string-serde]]
-            [safely.core :refer [safely]]
             [jackdaw.serdes.avro.schema-registry :as sr]
             [clojure.set :refer [difference union]])
   (:import [io.confluent.kafka.serializers KafkaAvroDeserializer KafkaAvroSerializer]

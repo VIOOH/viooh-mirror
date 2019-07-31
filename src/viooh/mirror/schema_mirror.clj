@@ -54,8 +54,9 @@
                                       (.getCompatibility src-registry nil))
                                     (throw rce))))
                               :on-error
-                              :max-retry :forevever
-                              :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                              :circuit-breaker :schema-registry-src
+                              :track-as "vioohmirror.schemas.src.ensure_compat.read"
+                              :max-retries :forevever
                               :message (str "Unable to get compatibility level from source registry"
                                             "for subject:" src-subject))
         dest-compatibility   (safely
@@ -70,8 +71,9 @@
                                       nil)
                                     (throw rce))))
                               :on-error
-                              :max-retry :forevever
-                              :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                              :circuit-breaker :schema-registry-dst
+                              :track-as "vioohmirror.schemas.dst.ensure_compat.read"
+                              :max-retries :forevever
                               :message (str "Unable to get compatibility level from destination registry"
                                             "for subject:" dest-subject))]
     (if (= src-compatibility dest-compatibility)
@@ -84,8 +86,9 @@
         (safely
          (.updateCompatibility dest-registry dest-subject src-compatibility)
          :on-error
-         :max-retry :forever
-         :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+         :circuit-breaker :schema-registry-dst
+         :track-as "vioohmirror.schemas.dst.ensure_compat.upd"
+         :max-retries :forever
          :message (str "Unable to update the compatibility level:" src-compatibility
                        " at destination registry for subject:" dest-subject))
         (log/info "Updated destination compatiblity to :" src-compatibility " at destination registry for subject:" dest-subject)))))
@@ -97,8 +100,9 @@
     (let [src-metadata      (safely
                              (.getSchemaMetadata src-registry src-subject missing-version)
                              :on-error
-                             :max-retry :forever
-                             :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                             :circuit-breaker :schema-registry-src
+                             :track-as "vioohmirror.schemas.src.register_missing.read"
+                             :max-retries :forever
                              :message (str "Unable to getSchemaMetadata from source registry for subject:" src-subject
                                            " missing-version:" missing-version " for source registry"))
           _                (log/debug "SchemaMetadata Request. src-registry"
@@ -109,8 +113,9 @@
           dest-schema-id   (safely
                             (.register dest-registry dest-subject src-schema)
                             :on-error
-                            :max-retry :forever
-                            :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                            :circuit-breaker :schema-registry-dst
+                            :track-as "vioohmirror.schemas.dst.register_missing.write"
+                            :max-retries :forever
                             :message (str "Unable to regsiter schema at destination registry for subject:" dest-subject
                                           " missing-schema:" src-schema))
           _                (log/debug "Register schema Request. dest-registry"
@@ -133,8 +138,9 @@
           schema-id (safely
                      (.getId src-registry src-subject schema)
                      :on-error
-                     :max-retry :forever
-                     :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                     :circuit-breaker :schema-registry-src
+                     :track-as "vioohmirror.schemas.src.versions.read"
+                     :max-retries :forever
                      :message (str "Unable to getId from source registry for subject:"
                                    src-subject " for schema:" schema))
           _         (log/debug "Get SchemaId Request. src-registry"
@@ -146,8 +152,9 @@
         (let [src-versions (safely
                             (set (.getAllVersions src-registry src-subject))
                             :on-error
-                            :max-retry :forever
-                            :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                            :circuit-breaker :schema-registry-src
+                            :track-as "vioohmirror.schemas.src.versions.read_all"
+                            :max-retries :forever
                             :message (str "Unable to getAllVersions from source registry"
                                           " for subject:" src-subject))
               _             (log/debug "Get All Versions Request. src-registry"
@@ -165,11 +172,12 @@
                                      #{})
                                    (throw rce))))
                              :on-error
+                             :circuit-breaker :schema-registry-dst
+                             :track-as "vioohmirror.schemas.dst.versions.read_all"
                              :retryable-error? #(not (and (= (type %) RestClientException)
                                                           (= (.getStatus %) 404)
                                                           (= (.getErrorCode %) 40401)))
-                             :max-retry :forever
-                             :retry-delay [:random-exp-backoff :base 200 :+/- 0.50 :max 30000]
+                             :max-retries :forever
                              :message (str "Unable to getAllVersions from destination registry"
                                            " for subject:" dest-subject))
               _              (log/debug "Get All Versions Request. dest-registry"

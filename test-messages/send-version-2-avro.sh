@@ -1,6 +1,7 @@
 #!/bin/bash
-CONFLUENT_BIN_VERSION="confluent-5.2.1"
-kap="/${HOME}/bin/${CONFLUENT_BIN_VERSION}/bin/kafka-avro-console-producer"
+[ "$CONFLUENT_HOME" = "" ] && echo "Please set the CONFLUENT_HOME environment variable." && exit 1
+
+kap="${CONFLUENT_HOME}/bin/kafka-avro-console-producer"
 
 VERSION_2='{"type": "record",
             "name": "person",

@@ -7,7 +7,8 @@
             [taoensso.timbre :as log]
             [jackdaw.serdes.avro.schema-registry :as sr]
             [clojure.string :as str]
-            [integrant.core :as ig])
+            [integrant.core :as ig]
+            [samsara.trackit :refer [track-rate]])
   (:import [org.apache.kafka.clients.consumer KafkaConsumer]
            [org.apache.kafka.clients.producer KafkaProducer]
            [org.apache.kafka.clients.producer
@@ -22,9 +23,11 @@
   as per the viooh.mirror.serde namespace."
   [group-id cfg serdes]
   (let [default-cfg {:auto.offset.reset "earliest"
-                     :group.id group-id}
+                     :group.id group-id
+                     :max.poll.interval.ms Integer/MAX_VALUE}
         fixed-cfg   {:enable.auto.commit false}
         merged-cfg  (-> (merge default-cfg (:kafka cfg) fixed-cfg)
+                       (update :max.poll.interval.ms int)
                         stringify-keys)]
     (log/info "Creating a Kafka Consumer using config:" merged-cfg
               "and serdes:" serdes)
@@ -51,24 +54,6 @@
 
 
 
-(defn send-to-destination
-  "Sends the supplied records to the destination topic using the
-  supplied producer. Retries the whole batch a few times before giving
-  up. Returns `true` if all the records were successfully produced to
-  the destination topic, `false` otherwise. "
-  [p dest-topic value-schema-mirror records]
-  (safely
-   (doseq [{:keys [key value headers timestamp] :as r} records]
-     (value-schema-mirror value)
-     @(k/send! p (->ProducerRecord dest-topic timestamp key value headers)))
-   true
-   :on-error
-   :max-retry 3
-   :default false
-   :retry-delay [:random-exp-backoff :base 300 :+/- 0.35 :max 30000]))
-
-
-
 (defn mirror
   "Polls records from the consumer `c`, and sends them to the
   destination topic using the producer supplied in a loop. If the
@@ -77,14 +62,23 @@
   [mirror-name ^KafkaConsumer c ^KafkaProducer p dest-topic value-schema-mirror closed?]
   (loop [records (k/poll c 3000)]
     (log/infof "[%s] Got %s records" mirror-name (count records))
-    (cond
-      @closed? :closed
-      (send-to-destination p dest-topic value-schema-mirror records)
-      (do
-        (.commitSync c)
-        (recur (k/poll c 3000)))
-      :else
-      (recur records))))
+    (track-rate (format "vioohmirror.messages.send.%s" mirror-name) (count records))
+
+    ;; send each record to destination kafka/topic
+    (doseq [{:keys [key value headers timestamp] :as r} records]
+      (safely
+       (when-not @closed?
+         (value-schema-mirror value)
+         @(k/send! p (->ProducerRecord dest-topic timestamp key value headers)))
+       :on-error
+       :max-retries :forever
+       :track-as (format "vioohmirror.messages.send.%s" mirror-name)))
+
+    ;; commit checkpoint
+    (when-not @closed?
+      (.commitSync c))
+
+    (recur (k/poll c 3000))))
 
 
 
@@ -122,7 +116,8 @@
            (log/info "Subscribed to source using topic config:" src-topic-cfg)
            (mirror group-id c p dest-topic-cfg value-schema-mirror closed?)))
        :on-error
-       :max-retry :forever)
+       :max-retries :forever
+       :track-as (format "vioohmirror.init.%s" group-id))
 
       (log/infof "[%s] Stopping mirror" name)
       (deliver p true))
