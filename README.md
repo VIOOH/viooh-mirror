@@ -46,7 +46,7 @@ the schemas are automatically created in the destination cluster.
 
 
    ;; to display metrics to the console use:
-   :metrics {:type :console, :reporting-frequency-seconds 30}
+   ;; :metrics {:type :console, :reporting-frequency-seconds 30}
 
    ;; to send metrics to Prometheus use:
    :metrics
