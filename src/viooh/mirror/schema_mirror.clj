@@ -1,6 +1,6 @@
 (ns viooh.mirror.schema-mirror
   (:require [safely.core :refer [safely]]
-            [taoensso.timbre :as log]
+            [clojure.tools.logging :as log]
             [clojure.set :refer [difference union]])
   (:import [io.confluent.kafka.schemaregistry.client
             SchemaRegistryClient

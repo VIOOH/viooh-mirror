@@ -3,8 +3,7 @@
   (:require [viooh.mirror.mirror :as mirror]
             [viooh.mirror.http-server :as http-server]
             [com.brunobonacci.oneconfig :refer [configure deep-merge]]
-            [taoensso.timbre :as log]
-            [timbre-ns-pattern-level :as timbre-ns-pattern-level]
+            [clojure.tools.logging :as log]
             [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.tools.reader.edn :as edn]
@@ -85,16 +84,6 @@
       println))
 
 
-(defn setup-logging
-  []
-  (let [conf (-> (io/resource "logging-config.edn")
-                 slurp
-                 (edn/read-string))]
-    (log/info "config:" conf)
-    (log/merge-config! {:middleware [(timbre-ns-pattern-level/middleware conf)]})))
-
-
-
 (defn start-metrics!
   "Start the metrics reporter"
   [{:keys [metrics] :as config}]
@@ -104,9 +93,7 @@
 
 (defn -main
   [& args]
-
   (print-vanity-title)
-  (setup-logging)
   (let [cfg (:value (configure {:key (config-key) :env (env) :version (version)}))
         cfg (deep-merge DEFAULT-CONFIG cfg)]
 

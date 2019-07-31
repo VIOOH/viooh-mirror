@@ -1,6 +1,6 @@
 (ns viooh.mirror.http-server
   (:require [org.httpkit.server :as httpkit]
-            [taoensso.timbre :as log]
+            [clojure.tools.logging :as log]
             [compojure.api.sweet :refer [api GET]]
             [ring.util.response :as resp]
             [integrant.core :as ig]))

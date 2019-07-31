@@ -1,0 +1,40 @@
+<configuration>
+ 
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <if condition='isDefined("ES_LOGGER_URL")'>
+    <then>
+      <appender name="ELASTIC" class="com.internetitem.logback.elasticsearch.ElasticsearchAppender">
+        <url>${ES_LOGGER_URL}/_bulk</url>
+        <index>viooh-mirror-logs-%date{yyyy-MM-dd}</index>
+        <type>log</type>
+        <errorsToStderr>true</errorsToStderr>
+        <headers>
+          <header>
+            <name>Content-Type</name>
+            <value>application/json</value>
+          </header>
+        </headers>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+          <level>INFO</level>
+          <onMatch>ACCEPT</onMatch>
+          <onMismatch>DENY</onMismatch>
+        </filter>
+      </appender>
+    </then>
+  </if>
+  
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+    <if condition='isDefined("ES_LOGGER_URL")'>
+      <then>
+        <appender-ref ref="ELASTIC" />
+      </then>
+    </if>
+  </root>
+  
+</configuration>

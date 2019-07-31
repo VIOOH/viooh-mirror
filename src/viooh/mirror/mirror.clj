@@ -4,7 +4,7 @@
             [viooh.mirror.schema-mirror :as sm]
             [clojure.walk :refer [stringify-keys]]
             [safely.core :refer [safely]]
-            [taoensso.timbre :as log]
+            [clojure.tools.logging :as log]
             [jackdaw.serdes.avro.schema-registry :as sr]
             [clojure.string :as str]
             [integrant.core :as ig]
