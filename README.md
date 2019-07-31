@@ -51,10 +51,12 @@ the schemas are automatically created in the destination cluster.
    ;; to send metrics to Prometheus use:
    :metrics
    {:type :prometheus
-    :reporter-name   "mirror"
-    :grouping-keys   {"env" "dev",
-                      "version" "1_2_3",
-                      "foo" "bar"}}}
+    ;; the url for the prometheus push gateway
+    :push-gateway-url  "http://localhost:9091"
+    :reporter-name     "mirror"
+    :grouping-keys     {"env" "dev",
+                        "version" "1_2_3",
+                        "foo" "bar"}}}
 
 ```
 
