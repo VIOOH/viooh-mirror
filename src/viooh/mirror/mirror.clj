@@ -76,9 +76,9 @@
 
     ;; commit checkpoint
     (when-not @closed?
-      (.commitSync c))
-
-    (recur (k/poll c 3000))))
+      (.commitSync c)
+      ;; and continue
+      (recur (k/poll c 3000)))))
 
 
 
