@@ -62,7 +62,7 @@
   [mirror-name ^KafkaConsumer c ^KafkaProducer p dest-topic value-schema-mirror closed?]
   (loop [records (k/poll c 3000)]
     (log/infof "[%s] Got %s records" mirror-name (count records))
-    (track-rate (format "vioohmirror.messages.send.%s" mirror-name) (count records))
+    (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
 
     ;; send each record to destination kafka/topic
     (doseq [{:keys [key value headers timestamp] :as r} records]

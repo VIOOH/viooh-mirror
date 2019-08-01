@@ -67,3 +67,16 @@ the schemas are automatically created in the destination cluster.
 # 1config env is picked from environment variable `ENV` (`local` by default)
 $ lein run
 ```
+
+## Monitoring
+
+Metrics are pushed with the prefix `vioohmirror.**`. To see the number
+of messages which are being polled by topic you can look for metrics
+of the form
+`vioohmirror.messages.poll.<group-id-prefix>_<mirror-name>.(count|1min_rate)`
+
+To look for the number of messages which are being sent to the mirrored kafka look for metrics in the form
+`vioohmirror.messages.send.<group-id-prefix>_<mirror-name>.inner.(count|1min_rate)` and for errors look for
+`vioohmirror.messages.send.<group-id-prefix>_<mirror-name>.inner_errors.(count|1min_rate)`.
+
+Circuit breakers are set around the source and destination schema-registry for the various operations.
