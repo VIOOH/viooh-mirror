@@ -6,7 +6,7 @@ properties([
 node{
     stage ('Build') {
         checkout scm
-        sh "lein do clean, uberjar"
+        sh "lein do clean, check, uberjar"
     }
 
     stage("Package") {
