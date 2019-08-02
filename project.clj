@@ -5,8 +5,8 @@
   :dependencies [[org.clojure/clojure "1.10.1"]
 
                  [com.taoensso/encore "2.112.0"]
-                 [samsara/trackit-core "0.9.1"]
-                 [samsara/trackit-prometheus "0.9.1"]
+                 [samsara/trackit-core "0.9.2"]
+                 [samsara/trackit-prometheus "0.9.2"]
                  [integrant "0.7.0"]
                  [http-kit "2.3.0"]
                  [metosin/compojure-api "1.1.11"]
