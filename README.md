@@ -53,7 +53,7 @@ the schemas are automatically created in the destination cluster.
    {:type :prometheus
     ;; the url for the prometheus push gateway
     :push-gateway-url  "http://localhost:9091"
-    :reporter-name     "mirror"
+    :reporter-name     "viooh-mirror"
     :grouping-keys     {"env" "dev",
                         "version" "1_2_3",
                         "foo" "bar"}}}
