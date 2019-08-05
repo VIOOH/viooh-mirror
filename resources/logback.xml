@@ -10,7 +10,7 @@
     <then>
       <appender name="ELASTIC" class="com.internetitem.logback.elasticsearch.ElasticsearchAppender">
         <url>${ES_LOGGER_URL}/_bulk</url>
-        <index>viooh-mirror-logs-%date{yyyy-MM-dd}</index>
+        <index>viooh-mirror-%date{yyyy.MM.dd}</index>
         <type>log</type>
         <errorsToStderr>true</errorsToStderr>
         <headers>
