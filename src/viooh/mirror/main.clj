@@ -94,6 +94,7 @@
 (defn -main
   [& args]
   (print-vanity-title)
+  (log/infof "Starting viooh-mirror v%s in env: '%s'" (version) (env))
   (let [cfg (:value (configure {:key (config-key) :env (env) :version (version)}))
         cfg (deep-merge DEFAULT-CONFIG cfg)]
 

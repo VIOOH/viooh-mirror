@@ -1,5 +1,5 @@
 <configuration>
- 
+
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>
       <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
@@ -19,15 +19,10 @@
             <value>application/json</value>
           </header>
         </headers>
-        <filter class="ch.qos.logback.classic.filter.LevelFilter">
-          <level>INFO</level>
-          <onMatch>ACCEPT</onMatch>
-          <onMismatch>DENY</onMismatch>
-        </filter>
       </appender>
     </then>
   </if>
-  
+
   <root level="INFO">
     <appender-ref ref="STDOUT" />
     <if condition='isDefined("ES_LOGGER_URL")'>
@@ -36,5 +31,5 @@
       </then>
     </if>
   </root>
-  
+
 </configuration>
