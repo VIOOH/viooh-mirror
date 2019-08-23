@@ -30,5 +30,7 @@
 
   :main viooh.mirror.main
 
+  :global-vars {*warn-on-reflection* true}
+
   :profiles {:uberjar {:aot :all}
              :dev {:jvm-opts ["-D1config.default.backend=fs"]}})
