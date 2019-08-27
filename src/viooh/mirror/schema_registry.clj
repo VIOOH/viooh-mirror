@@ -1,8 +1,8 @@
 (ns viooh.mirror.schema-registry
   (:import
    [io.confluent.kafka.schemaregistry.client.rest.exceptions RestClientException]
-   [org.apache.avro Schema]
-   [io.confluent.kafka.schemaregistry.client CachedSchemaRegistryClient]))
+   [io.confluent.kafka.schemaregistry.client CachedSchemaRegistryClient]
+   [org.apache.avro Schema]))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -112,11 +112,26 @@
 
 
 (defn subject-compatibility
-  "Given a schema id, or a , it returns the Avro schema"
-  [url ^String subject]
-  (return-nil-when-not-found
-   (.. (schema-registry url)
-       (getCompatibility subject))))
+  "Given a subject it returns the subject compatibility level or nil if not found.
+   Without a subject it returns the default compatibility level"
+  ([url]
+   (subject-compatibility url nil))
+  ([url ^String subject]
+   (return-nil-when-not-found
+    (.. (schema-registry url)
+        (getCompatibility subject)))))
+
+
+
+(defn update-subject-compatibility
+  "Given a subject it updates the subject compatibility level to the given value
+   Without a subject it updates the default compatibility level"
+  ([url ^String level]
+   (update-subject-compatibility url nil level))
+  ([url ^String subject ^String level]
+   (return-nil-when-not-found
+    (.. (schema-registry url)
+        (updateCompatibility subject level)))))
 
 
 
@@ -129,12 +144,28 @@
 
 
 (defn delete-subject
-  "Given a subject it removes it if found and returns the list of deleted versions"
+  "Given a subject it removes it if found and returns the list of
+  deleted versions"
   [url ^String subject]
   (return-nil-when-not-found
    (.. (schema-registry url)
        (deleteSubject subject))))
 
+
+(defn delete-version
+  "Given a subject and a schema version it removes it if found and
+  returns the list of deleted versions"
+  [url ^String subject ^long version]
+  (return-nil-when-not-found
+   (.. (schema-registry url)
+       (deleteSchemaVersion subject (str version)))))
+
+
+
+(defn parse-schema
+  "Given a Avro schema as a string returns a Avro RecordSchema object"
+  [^String schema]
+  (Schema/parse schema))
 
 
 (comment
@@ -145,16 +176,23 @@
 
   (versions url "prd.datariver.prv_DigitalReservation-value")
 
-  (schema-metadata url "prd.datariver.prv_DigitalReservation-value" 3)
+  (schema-metadata url "prd.datariver.prv_DigitalReservation-value" 1)
+
+  (->> (schema-metadata url "prd.datariver.prv_DigitalReservation-value" 1)
+     :schema
+     parse-schema)
 
   (retrieve-schema url 5)
-  (retrieve-schema url 5 "prd.datariver.prv_DigitalReservation-value")
+  (retrieve-schema url 451 "prd.datariver.prv_DigitalReservation-value")
 
   (schema-version url "prd.datariver.prv_DigitalReservation-value" (retrieve-schema url 5))
 
   (subject-compatibility url "prd.datariver.prv_DigitalReservation-value" )
 
-  (register-schema url "test" (retrieve-schema url 5))
+  (register-schema url "test" sc1)
   (delete-subject url "test")
 
+  (delete-version url "test" 5)
+
+  (update-subject-compatibility url "test" "FORWARD_TRANSITIVE")
   )
