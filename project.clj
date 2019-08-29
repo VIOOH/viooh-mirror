@@ -1,10 +1,7 @@
 (defproject viooh-mirror (-> "resources/viooh-mirror.version" slurp .trim)
   :description "Utility to mirror kafka topics across clusters"
   :url "https://github.com/VIOOH/viooh-mirror"
-  :repositories [["confluent" {:url "https://packages.confluent.io/maven/"}]
-                 ["releases" {:url "https://viooh.jfrog.io/viooh/list/libs-release-local/"
-                              :username :env/ARTIFACTORY_USR
-                              :password :env/ARTIFACTORY_PSW}]]
+  :repositories [["confluent" {:url "https://packages.confluent.io/maven/"}]]
   :dependencies [[org.clojure/clojure "1.10.1"]
 
                  [com.taoensso/encore "2.112.0"]
@@ -12,8 +9,7 @@
                  [samsara/trackit-prometheus "0.9.2"]
                  [integrant "0.7.0"]
                  [http-kit "2.3.0"]
-                 [metosin/compojure-api "1.1.11"
-                  :exclusions [org.flatland/ordered]]
+                 [metosin/compojure-api "1.1.11"]
                  [org.flatland/ordered "1.5.7"]   ;;Version pulled by compojure-api has a bug on jdk 11
 
                  [com.brunobonacci/safely "0.5.0-alpha7"]
@@ -23,9 +19,6 @@
                  [fundingcircle/jackdaw "0.6.4"]
                  [io.confluent/kafka-schema-registry-client "5.1.2"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
-
-                 [viooh/kafka-ssl-helper "0.1.0"]
-
                  ;;logging madness
                  [org.clojure/tools.logging "0.5.0"]
                  [org.slf4j/log4j-over-slf4j "1.7.14"]

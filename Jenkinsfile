@@ -6,9 +6,7 @@ properties([
 node{
     stage ('Build') {
         checkout scm
-        withCredentials([usernamePassword(credentialsId: 'Artifactory', usernameVariable: 'ARTIFACTORY_USR', passwordVariable: 'ARTIFACTORY_PSW')]) {
-          sh "lein do clean, deps, check, uberjar"
-        }
+        sh "lein do clean, check, uberjar"
     }
 
     stage("Package") {
