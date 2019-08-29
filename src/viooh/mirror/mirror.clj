@@ -8,7 +8,8 @@
             [jackdaw.serdes.avro.schema-registry :as sr]
             [clojure.string :as str]
             [integrant.core :as ig]
-            [samsara.trackit :refer [track-rate]])
+            [samsara.trackit :refer [track-rate]]
+            [kafka-ssl-helper.core  :as ssl-helper])
   (:import [org.apache.kafka.clients.consumer KafkaConsumer]
            [org.apache.kafka.clients.producer KafkaProducer]
            [org.apache.kafka.clients.producer
@@ -81,6 +82,15 @@
       (recur (k/poll c 3000)))))
 
 
+(defn- with-ssl-options
+  "Takes a consumer/producer config and wraps ssl options (keystores, etc...)"
+  [{:keys [private-key ca-cert-pem cert-pem] :as config}]
+  (if (and private-key ca-cert-pem cert-pem)
+    (merge (dissoc config :private-key :cert-pem :ca-cert-pem)
+           (ssl-helper/ssl-opts config))
+    config))
+
+
 
 (defn start-mirror
   "Starts a `mirror`.A `mirror` is a consumer loop that sends each record
@@ -110,7 +120,7 @@
       (safely
        (when-not @closed?
          (with-open [c (consumer group-id source src-serdes)
-                     p (producer destination dest-serdes)]
+                     p (producer (with-ssl-options destination) dest-serdes)]
 
            (k/subscribe c [src-topic-cfg])
            (log/info "Subscribed to source using topic config:" src-topic-cfg)
