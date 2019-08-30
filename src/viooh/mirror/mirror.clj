@@ -30,7 +30,7 @@
         merged-cfg  (-> (merge default-cfg (:kafka cfg) fixed-cfg)
                        (update :max.poll.interval.ms int)
                         stringify-keys)]
-    (log/info "Creating a Kafka Consumer using config:" merged-cfg
+    (log/info "Creating a Kafka Consumer for group-id" group-id
               "and serdes:" serdes)
     (k/consumer merged-cfg serdes)))
 
@@ -42,8 +42,7 @@
   [cfg serdes]
   (let [p-cfg (-> (:kafka cfg)
                   stringify-keys)]
-    (log/info "Creating a Kafka Producer using config:" p-cfg
-              "and serdes:" serdes)
+    (log/info "Creating a Kafka Producer using serdes:" serdes)
     (k/producer p-cfg serdes)))
 
 
@@ -120,7 +119,8 @@
       (safely
        (when-not @closed?
          (with-open [c (consumer group-id source src-serdes)
-                     p (producer (with-ssl-options destination) dest-serdes)]
+                     p (producer (update destination :kafka with-ssl-options)
+                                 dest-serdes)]
 
            (k/subscribe c [src-topic-cfg])
            (log/info "Subscribed to source using topic config:" src-topic-cfg)
