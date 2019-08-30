@@ -1,10 +1,12 @@
 (defproject viooh-mirror (-> "resources/viooh-mirror.version" slurp .trim)
   :description "Utility to mirror kafka topics across clusters"
   :url "https://github.com/VIOOH/viooh-mirror"
+
   :repositories [["confluent" {:url "https://packages.confluent.io/maven/"}]
                  ["releases" {:url "https://viooh.jfrog.io/viooh/list/libs-release-local/"
                               :username :env/ARTIFACTORY_USR
                               :password :env/ARTIFACTORY_PSW}]]
+
   :dependencies [[org.clojure/clojure "1.10.1"]
 
                  [com.taoensso/encore "2.112.0"]
@@ -40,4 +42,8 @@
   :global-vars {*warn-on-reflection* true}
 
   :profiles {:uberjar {:aot :all}
-             :dev {:jvm-opts ["-D1config.default.backend=fs"]}})
+             :dev {:jvm-opts ["-D1config.default.backend=fs"]
+                   :dependencies [[midje "1.9.9"]
+                                  [org.clojure/test.check "0.10.0"]
+                                  [criterium "0.4.5"]]
+                   :plugins      [[lein-midje "3.2.1"]]}})
