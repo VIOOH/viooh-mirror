@@ -1,4 +1,4 @@
-(ns viooh-mirror.schema-mirror-test
+(ns viooh-mirror.schema-mirror-analysis-test
   (:require [viooh.mirror.schema-mirror :refer :all]
             [midje.sweet :refer :all]))
 
@@ -195,8 +195,6 @@
 
 
 
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                                            ;;
 ;;----==| C O M P A R E - S T R I C T - S C H E M A - V E R S I O N S |==---- ;;
@@ -265,7 +263,6 @@
 
 
 
-
 (fact
  "analyse-strict-schema-versions: If schemas mismatch: schema in
  different orders (in this case it cannot be repaired)"
@@ -324,7 +321,6 @@
               :missing [:schema1] :matches? [false false]})
 
  )
-
 
 
 
@@ -444,7 +440,8 @@
     :versions
     [{:id 181, :version 1, :schema :schema1}
      {:id 482, :version 2, :schema :schema2}
-     {:id 634, :version 4, :schema :schema3}]},
+     {:id 634, :version 4, :schema :schema3}
+     {:id 774, :version 5, :schema :schema4}]},
 
    :destination
    {:schema-registry "destination-schema-registry",
@@ -453,13 +450,14 @@
     :global-compatibility "FORWARD_TRANSITIVE",
     :versions
     [{:id 1, :version 1, :schema :schema1}
-     {:id 5, :version 2, :schema :schema9}
+     {:id 5, :version 2, :schema :schema2}
+     {:id 14,:version 3, :schema :schema9}
      ]}}
   (analyse-schema-versions-lenient))
 
  => (contains {:test false
-              :matches? [true false false]
-              :missing '(:schema2 :schema3)})
+              :matches? [true true false false]
+              :missing '(:schema3 :schema4)})
  )
 
 
@@ -495,7 +493,6 @@
 
  => (contains {:test false})
  )
-
 
 
 

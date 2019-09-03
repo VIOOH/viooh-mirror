@@ -99,7 +99,7 @@
 
 
 (defn retrieve-schema
-  "Given a schema id, or a , it returns the Avro schema"
+  "Given a schema id, and optionally a subject, it returns the Avro schema"
   ([url ^long id]
    (return-nil-when-not-found
     (.. (schema-registry url)

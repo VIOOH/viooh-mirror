@@ -28,15 +28,15 @@
 ;; to keep in mind in regards to schemas:
 ;;
 ;;  - Order in which schemas are registered matters (unless
-;;    comatibility is NONE)
+;;    comatibility is NONE).
 ;;
 ;;  - Messages can arrive with any of the registered schemas for a
 ;;    given subject
 ;;
 ;;  - Messages can arrive with schemas versions which are no-longer
-;;    in the subject (deleted version, but records still present)
+;;    in the subject (deleted version, but records still present).
 ;;
-;;  - Schemas in their object form are comparable objects (just values)
+;;  - Schemas in their object form are comparable objects (just values).
 ;;
 ;;  - Destination subjects might have more schemas than the source;
 ;;    for example local testing or when multiple source topics
@@ -62,12 +62,19 @@
 ;; The processing can be summarised as follow:
 ;;
 ;; ```
-;;        (->> (compare-subjects src dest)
-;;             (analyse-subjects)
-;;             (map repair-actions)
-;;             (run! perform-repairs))
+;;        ;; logical flow
+;;        (->> (compare-subjects src dest)  ;
+;;             (analyse-subjects)           ;
+;;             (map repair-actions)         ;
+;;             (run! perform-repairs))      ;
 ;; ```
 ;;
+;; This is only an approximation as the repair of the compatibility
+;; level must be done first as it influences the logic of how schemas
+;; are compared.
+;;
+
+
 
 (defn pad
   "Given a size and a collection it returns a sequence with coll
@@ -92,6 +99,7 @@
   (case strategy
     :topic-name
     (str topic "-" (name key-or-val))))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -183,7 +191,7 @@
         dst-match-src (filter (into #{} src) dst)
         missing (remove (into #{} dst) src)
         s   (max (count src) (count dst-match-src))]
-    {:type :analyse-schema-versions
+    {:type :analyse-schema-versions-lenient
      :dst-schema-registry dst-schema-registry
      :dst-subject dst-subject
      :test (= src dst-match-src) :src (count src-versions)
@@ -202,13 +210,11 @@
   (let [src (into #{} (map :schema src-versions))
         dst (into #{} (map :schema dst-versions))
         missing (difference src dst)]
-    {:type :analyse-schema-versions
+    {:type :analyse-schema-versions-lenient-unordered
      :dst-schema-registry dst-schema-registry
      :dst-subject dst-subject
      :test (empty? missing) :src (count src-versions)
      :dst (count dst-versions) :missing missing}))
-
-
 
 
 
@@ -223,6 +229,11 @@
 
 
 
+;; -------------------------------------------------------------------
+;; It attempts to repair the consistency level of the destination
+;; subject such that it will match the effective source compatibility
+;; level.
+;; -------------------------------------------------------------------
 (defmethod repair-actions :analyse-compatibility
   [{:keys [test dst-schema-registry dst-subject src-level]}]
   (when-not test
@@ -233,13 +244,110 @@
 
 
 
-(defmethod repair-actions :analyse-compatibility
-  [{:keys [test dst-schema-registry dst-subject src-level]}]
+(defn- is-prefix-matching?
+  "Returns true if the matches has at least `n` starting `true` values."
+  [n matches]
+  (= (take n matches)
+     (repeat n true)))
+
+
+
+;; -------------------------------------------------------------------
+;; In this case it is required that source and destinations are a
+;; exact mirror one of each other. Therefore it is required that the
+;; schemas versions are the same and in the same order.  The only
+;; repair possible is that one or more schemas are missing in the
+;; destination given that they have a common prefix (which it could be
+;; empty, in case destination is new).
+;;
+;; Here we check whether the source contains more schemas than the
+;; destination and if the existing schemas in the destination match
+;; exactly the source. In any other case it is not possible to repair
+;; the destination, therefore we raise an error
+;; -------------------------------------------------------------------
+(defmethod repair-actions :analyse-strict-schema-versions
+  [{:keys [test dst-schema-registry dst-subject src dst matches? missing]
+    :as data}]
   (when-not test
-    [{:action :change-subject-compatibility
-      :schema-registry dst-schema-registry
-      :subject dst-subject
-      :level src-level}]))
+    ;; It can only be repaired if the source has some newer (missing)
+    ;; schema which are not present in the tail of the destination
+    ;; subject.
+    (if (and (> src dst) (is-prefix-matching? dst matches?))
+      ;; generate an action for every schema to add
+      (map (fn [s]
+             {:action :register-schema
+              :schema-registry dst-schema-registry
+              :subject dst-subject
+              :schema s}) missing)
+      ;;
+      ;; If the one missing is in the middle or the beginning, of if the
+      ;; destination has more schemas than the source this cannot be
+      ;; repaired.
+      [{:action :raise-error
+        :message "Strict mirror not possible as source and destination subjects have different schemas"
+        :data (dissoc data :missing)}])))
+
+
+
+;; -------------------------------------------------------------------
+;; This is probably the easiest case, we don't case about schema
+;; ordering we want only to make sure that all the schemas which are
+;; present in the source are registered in the destination subject as
+;; well and we don't even care if the destination has additional
+;; subjects. For any missing schema we issue a schema registration
+;; request.
+;; -------------------------------------------------------------------
+(defmethod repair-actions :analyse-schema-versions-lenient-unordered
+  [{:keys [test dst-schema-registry dst-subject src dst missing]
+    :as data}]
+  (when (and (not test) (seq missing))
+    ;; generate an action for every schema to add
+    (map (fn [s]
+           {:action :register-schema
+            :schema-registry dst-schema-registry
+            :subject dst-subject
+            :schema s}) missing)))
+
+
+
+;; -------------------------------------------------------------------
+;; In this case we allow the target to have additional schemas in the
+;; subject but we want to ensure that the relative order of the
+;; schemas is the same as the source subject. The use case for this
+;; one could be for example to mirror a production stream into a test
+;; environment and allow the test environment to register a newer
+;; version of the schema with additional changes. At this point the
+;; source will have a set of common schemas, plus one or more schemas
+;; which are present only in the target side, and when one of the
+;; schema version becomes official and promoted to production we want
+;; to make sure that the relative order (as well as the compatibility
+;; rules) are respected for the given subject.
+;; -------------------------------------------------------------------
+(defmethod repair-actions :analyse-schema-versions-lenient
+  [{:keys [test dst-schema-registry dst-subject missing matches?]
+    :as data}]
+  (when-not test
+    ;; It can only be repaired if the source has some newer (missing)
+    ;; schema which are not present in the destination subject.
+    ;; Even if the destination subject has schemas which are not
+    ;; present in the source.
+    (if (and ;; check if there are missing schemas to be added
+         (seq missing)
+         ;; check that both have a common set of schemas
+         (= (dedupe matches?) [true false]))
+      ;; generate an action for every schema to add
+      (map (fn [s]
+             {:action :register-schema
+              :schema-registry dst-schema-registry
+              :subject dst-subject
+              :schema s}) missing)
+      ;;
+      ;; If the one missing is in the middle or the beginning, of if the
+      ;; destination has more schemas than the source this cannot be
+      ;; repaired.
+      [{:action :raise-error
+        :message "Lenient mirror not possible as source and destination subjects don't share a common root set of schemas."
+        :data (dissoc data :missing)}])))
 
 
 
@@ -252,21 +360,77 @@
   (let [src-subject   (subject-name subject-naming-strategy src-topic :value)
         dst-subject   (subject-name subject-naming-strategy dst-topic :value)
         diff          (compare-subjects src-registry src-subject dst-registry dst-subject)
-        compatibility (analyse-compatibility diff)]
+        compatibility (analyse-compatibility diff)
 
+        ;; schema analysis
+        analysis
+        (cond
+          (= mirror-mode :strict)
+          (analyse-strict-schema-versions diff)
 
-    (cond
-      (= mirror-mode :strict)
-      (->> [compatibility (analyse-strict-schema-versions diff)])
+          (and (= mirror-mode :lenient) (= "NONE" (:dst-level compatibility)))
+          (analyse-schema-versions-lenient-unordered diff)
 
-      (and (= mirror-mode :lenient) (= "NONE" (:dst compatibility)))
-      (->> [compatibility (analyse-schema-versions-lenient-unordered diff)])
+          (and (= mirror-mode :lenient) (= "NONE" (:dst-level compatibility)))
+          (analyse-schema-versions-lenient diff))]
 
-      (and (= mirror-mode :lenient) (= "NONE" (:dst compatibility)))
-      (->> [compatibility (analyse-schema-versions-lenient diff)]))
+    (->> [compatibility analysis]
+       flatten
+       (remove nil?)
+       (mapcat repair-actions))
     ))
 
 
+
+
+(comment
+  (mirror-schemas
+   {:name "prv_DigitalReservation_PT",
+    :mirror-mode :lenient
+    :subject-naming-strategy :topic-name,
+    :source
+    {:kafka
+     {:bootstrap.servers
+      "kf1.dataplatform.jcdecaux.com:9092,kf2.dataplatform.jcdecaux.com:9092,kf3.dataplatform.jcdecaux.com:9092",
+      :max.partition.fetch.bytes "1000000",
+      :max.poll.records "50000",
+      :auto.offset.reset "earliest"},
+     :topic {:topic-name "prv_DigitalReservation_PT"},
+     :schema-registry-url "http://registry.dataplatform.jcdecaux.com"},
+    :destination
+    {:kafka
+     {:bootstrap.servers
+      "10.1.151.67:9092,10.1.152.252:9092,10.1.153.241:9092"},
+     :topic {:topic-name "prd.datariver.prv_DigitalReservation"},
+     :schema-registry-url "https://schema-registry.dev.develop.farm"},
+    :serdes [:string :avro]})
+
+
+  (def diff
+    (compare-subjects
+     "http://registry.dataplatform.jcdecaux.com"
+     "prv_DigitalReservation_PT-value"
+
+     "https://schema-registry.dev.develop.farm"
+     "prd.datariver.prv_DigitalReservation2-value"))
+
+  (analyse-compatibility diff)
+  (analyse-strict-schema-versions diff)
+  (analyse-schema-versions-lenient diff)
+  (analyse-schema-versions-lenient-unordered diff)
+
+  (->> (analyse-strict-schema-versions diff)
+     (repair-actions))
+
+  )
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                            ;;
+;;        ----==| ***REMOVED***   B E Y O N D   T H I S   P O I N T |==----         ;;
+;;                                                                            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
 (defonce DEFAULT-NAME-STRATEGY (TopicNameStrategy. )) ;;Look to make this configurable per serde
