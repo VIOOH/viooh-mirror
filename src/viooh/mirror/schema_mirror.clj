@@ -133,7 +133,32 @@
 
 
 
+(comment
+  (def diff
+    (compare-subjects
+     "http://registry.dataplatform.jcdecaux.com"
+     "prv_ProofOfPlay_V12-value"
 
+     "https://schema-registry.dev.develop.farm"
+     "prd.datariver.prv_ProofOfPlay_V12-value"))
+
+
+  (def diff
+    (compare-subjects
+     "http://registry.dataplatform.jcdecaux.com"
+     "prv_DigitalReservation_IT-value"
+
+     "https://schema-registry.dev.develop.farm"
+     "prd.datariver.prv_DigitalReservation-value"))
+
+  (def diff
+    (compare-subjects
+     "http://registry.dataplatform.jcdecaux.com"
+     "prv_DigitalReservation_UK-value"
+
+     "http://registry.dataplatform.jcdecaux.com"
+     "prv_DigitalReservation_SE-value"))
+  )
 
 
 
@@ -351,7 +376,63 @@
 
 
 
-(defn mirror-schemas
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                            ;;
+;;               ----==| P E R F O R M - R E P A I R S |==----                ;;
+;;                                                                            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defmulti perform-repair :action)
+
+
+
+(defmethod perform-repair :change-subject-compatibility
+  [{:keys [schema-registry subject level action] :as a}]
+  (log/info "Performing repair action: " action
+            "on registry:" schema-registry
+            "and subject:" subject
+            "setting to level:" level)
+  (sr/update-subject-compatibility schema-registry subject level))
+
+
+
+(defmethod perform-repair :register-schema
+  [{:keys [schema-registry subject schema action] :as a}]
+  (log/info "Performing repair action: " action
+            "on registry:" schema-registry
+            "and subject:" subject
+            "schema:" schema)
+  (sr/register-schema schema-registry subject schema))
+
+
+
+(defmethod perform-repair :raise-error
+  [{:keys [message] :as a
+    {:keys [dst-schema-registry dst-subject] :as data} :data}]
+  (log/warn "Repair not possible"
+            "on registry:" dst-schema-registry
+            "and subject:" dst-subject
+            "reason:" message)
+  (throw (ex-info message data)))
+
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;                                                                            ;;
+;;                ----==| M I R R O R - S C H E M A S |==----                 ;;
+;;                                                                            ;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(defn analyse-subjetcs
+  "Returns a list of repair actions which are required. The analysis and
+  repair must be repeated until the analysis comes back clear (no
+  repair actions required). This is due to the fact that some analysis
+  are only executed if the previous problem has been fixed.
+  "
   [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
     {dst-registry :schema-registry-url {dst-topic :topic-name} :topic} :destination
     :keys [mirror-mode subject-naming-strategy]}]
@@ -359,70 +440,72 @@
   ;; TODO: should we handle avro schemas for keys as well?
   (let [src-subject   (subject-name subject-naming-strategy src-topic :value)
         dst-subject   (subject-name subject-naming-strategy dst-topic :value)
-        diff          (compare-subjects src-registry src-subject dst-registry dst-subject)
+        diff          (compare-subjects src-registry src-subject
+                                        dst-registry dst-subject)
         compatibility (analyse-compatibility diff)
+        compat-repair (repair-actions compatibility)]
 
-        ;; schema analysis
-        analysis
-        (cond
-          (= mirror-mode :strict)
-          (analyse-strict-schema-versions diff)
+    (or
+     ;;
+     ;; If the compatibility need repaired, then run this one first
+     ;;
+     (-> diff analyse-compatibility repair-actions)
 
-          (and (= mirror-mode :lenient) (= "NONE" (:dst-level compatibility)))
-          (analyse-schema-versions-lenient-unordered diff)
+     ;;
+     ;; if compatibility doesn't need repairs, then analyse schemas
+     ;;
+     (->
+      (cond
+        (= mirror-mode :strict)
+        (analyse-strict-schema-versions diff)
 
-          (and (= mirror-mode :lenient) (= "NONE" (:dst-level compatibility)))
-          (analyse-schema-versions-lenient diff))]
+        (and (= mirror-mode :lenient) (= "NONE" (:dst-level compatibility)))
+        (analyse-schema-versions-lenient-unordered diff)
 
-    (->> [compatibility analysis]
-       flatten
-       (remove nil?)
-       (mapcat repair-actions))
-    ))
-
-
-
-
-(comment
-  (mirror-schemas
-   {:name "prv_DigitalReservation_PT",
-    :mirror-mode :lenient
-    :subject-naming-strategy :topic-name,
-    :source
-    {:kafka
-     {:bootstrap.servers
-      "kf1.dataplatform.jcdecaux.com:9092,kf2.dataplatform.jcdecaux.com:9092,kf3.dataplatform.jcdecaux.com:9092",
-      :max.partition.fetch.bytes "1000000",
-      :max.poll.records "50000",
-      :auto.offset.reset "earliest"},
-     :topic {:topic-name "prv_DigitalReservation_PT"},
-     :schema-registry-url "http://registry.dataplatform.jcdecaux.com"},
-    :destination
-    {:kafka
-     {:bootstrap.servers
-      "10.1.151.67:9092,10.1.152.252:9092,10.1.153.241:9092"},
-     :topic {:topic-name "prd.datariver.prv_DigitalReservation"},
-     :schema-registry-url "https://schema-registry.dev.develop.farm"},
-    :serdes [:string :avro]})
+        (and (= mirror-mode :lenient) (= "NONE" (:dst-level compatibility)))
+        (analyse-schema-versions-lenient diff))
+      repair-actions))))
 
 
-  (def diff
-    (compare-subjects
-     "http://registry.dataplatform.jcdecaux.com"
-     "prv_DigitalReservation_PT-value"
+;; -------------------------------------------------------------------
+;;
+;; `mirror-schemas` it takes a mirroring configuration and it attempts
+;; to mirror the schemas. If repairs actions are required these will
+;; be performed (when possible)
+;;
+;; The first step is to detect whether the destination subject has a
+;; different compatibility level, if so, then we will attempt repair
+;; it before attempting any other analysis. The reason is that the
+;; compatibility level also determine which whether the analysis on
+;; schema ordering is relavant or not.
+;;
+;; After the compatibility has been fixed, we will attempt to analyse
+;; the schemas and repair them.
+;; -------------------------------------------------------------------
+(defn mirror-schemas
+  [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
+    {dst-registry :schema-registry-url {dst-topic :topic-name} :topic} :destination
+    :keys [mirror-mode subject-naming-strategy] :as mirror}]
 
-     "https://schema-registry.dev.develop.farm"
-     "prd.datariver.prv_DigitalReservation2-value"))
+  (loop [current-repairs  (analyse-subjetcs mirror)
+         previous-repairs #{}]
 
-  (analyse-compatibility diff)
-  (analyse-strict-schema-versions diff)
-  (analyse-schema-versions-lenient diff)
-  (analyse-schema-versions-lenient-unordered diff)
+    (when (seq current-repairs)
 
-  (->> (analyse-strict-schema-versions diff)
-     (repair-actions))
+      (let [failed-repairs (filter previous-repairs current-repairs)]
+        (when (seq failed-repairs)
+          (throw (ex-info "Failed to repair subject"
+                          {:mirror mirror
+                           :failed-repairs failed-repairs}))))
 
-  )
+      ;; attempting repairs
+      (run! perform-repair current-repairs)
+
+      ;; next round
+      (recur (analyse-subjetcs mirror) (into previous-repairs current-repairs)))))
+
+
+
 
 
 
