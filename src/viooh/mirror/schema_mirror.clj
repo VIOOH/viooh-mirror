@@ -133,35 +133,6 @@
 
 
 
-(comment
-  (def diff
-    (compare-subjects
-     "http://registry.dataplatform.jcdecaux.com"
-     "prv_ProofOfPlay_V12-value"
-
-     "https://schema-registry.dev.develop.farm"
-     "prd.datariver.prv_ProofOfPlay_V12-value"))
-
-
-  (def diff
-    (compare-subjects
-     "http://registry.dataplatform.jcdecaux.com"
-     "prv_DigitalReservation_IT-value"
-
-     "https://schema-registry.dev.develop.farm"
-     "prd.datariver.prv_DigitalReservation-value"))
-
-  (def diff
-    (compare-subjects
-     "http://registry.dataplatform.jcdecaux.com"
-     "prv_DigitalReservation_UK-value"
-
-     "http://registry.dataplatform.jcdecaux.com"
-     "prv_DigitalReservation_SE-value"))
-  )
-
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                                            ;;
 ;;              ----==| A N A L Y S E - S U B J E C T S |==----               ;;
@@ -376,7 +347,6 @@
 
 
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                                            ;;
 ;;               ----==| P E R F O R M - R E P A I R S |==----                ;;
@@ -416,7 +386,6 @@
             "and subject:" dst-subject
             "reason:" message)
   (throw (ex-info message data)))
-
 
 
 
@@ -467,11 +436,12 @@
       repair-actions))))
 
 
+
 ;; -------------------------------------------------------------------
 ;;
 ;; `mirror-schemas` it takes a mirroring configuration and it attempts
 ;; to mirror the schemas. If repairs actions are required these will
-;; be performed (when possible)
+;; be performed (when possible);
 ;;
 ;; The first step is to detect whether the destination subject has a
 ;; different compatibility level, if so, then we will attempt repair
