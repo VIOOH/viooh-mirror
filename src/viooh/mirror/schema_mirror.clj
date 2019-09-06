@@ -477,13 +477,72 @@
 
 
 
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                                            ;;
-;;        ----==| ***REMOVED***   B E Y O N D   T H I S   P O I N T |==----         ;;
+;;                  ----==| R E P L   S E S S I O N |==----                   ;;
 ;;                                                                            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+(comment
+
+  ;; create comparison structure
+  (def diff
+    (compare-subjects
+     "http://source.registry.com/"
+     "source-topic"
+
+     "http://destination.registry.com/"
+     "destination-topic"))
+
+
+  ;; compare subjects on several criteria
+  (analyse-compatibility diff)
+  (analyse-strict-schema-versions diff)
+  (analyse-schema-versions-lenient diff)
+  (analyse-schema-versions-lenient-unordered diff)
+
+
+
+  ;;
+  ;; single mirror configuration
+  ;;
+  (def cfg
+    {:name "my-mirror",
+     :mirror-mode :strict
+     :subject-naming-strategy :topic-name,
+     :source
+     {:kafka
+      {:bootstrap.servers "broker1:9092",
+       :max.partition.fetch.bytes "1000000",
+       :max.poll.records "50000",
+       :auto.offset.reset "earliest"},
+      :topic {:topic-name "source-topic"},
+      :schema-registry-url "http://source.registry.com/"},
+
+     :destination
+     {:kafka
+      {:bootstrap.servers "destbroker1:9092"},
+      :topic {:topic-name "destination-topic"},
+      :schema-registry-url "http://destination.registry.com/"},
+     :serdes [:string :avro]})
+
+  ;; analyse differences and propose required changes to the
+  ;; destination subject in order to mirror the source this only
+  ;; computes the repair actions, but doesn't perform any change
+  (analyse-subjetcs cfg)
+
+  ;;
+  ;; `mirror-schema` will analyse the subjects and make any necessary
+  ;; change to the destination subject to match the source subject.
+  ;; THIS PERFORMS CHANGES THE DESTINATION SCHEMA REGISTRY
+  (mirror-schemas cfg)
+
+
+  )
+
+
+
 
 
 (defonce DEFAULT-NAME-STRATEGY (TopicNameStrategy. )) ;;Look to make this configurable per serde
