@@ -32,6 +32,10 @@
             <name>host.name</name>
             <value>${HOSTNAME}</value>
           </property>
+          <property>
+            <name>exception</name>
+            <value>%xThrowable{full}</value>
+          </property>
         </properties>
       </appender>
     </then>
