@@ -1,6 +1,7 @@
 # viooh-mirror
 
 ![kafka-mirror](./doc/kafka-mirror.gif)
+
 _Rotating Kafka's head statue by David Cerny_
 
 
