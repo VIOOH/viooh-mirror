@@ -1,6 +1,11 @@
 # viooh-mirror
 
-Utility to mirror kafka topics across clusters.
+![kafka-mirror](./doc/kafka-mirror.gif)
+_Rotating Kafka's head statue by David Cerny_
+
+
+Viooh-Mirror an utility to mirror kafka topics across clusters along
+with their schemas.
 
 
 ## Configuration

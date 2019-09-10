@@ -71,9 +71,11 @@
   destination topic using the producer supplied in a loop. If the
   production fails, the same records are tried again. The loop exits
   if `closed?` is set to true."
-  [mirror-cfg mirror-name ^KafkaConsumer c ^KafkaProducer p dest-topic closed?]
+  [{:keys [poll-interval] mirror-name :name
+    {dest-topic :topic} :destination :as mirror-cfg}
+   ^KafkaConsumer c ^KafkaProducer p closed?]
   (let [is-new-schema? (yield-on-new-value)]
-    (loop [records (k/poll c 5000)]
+    (loop [records (k/poll c poll-interval)]
       (log/infof "[%s] Got %s records" mirror-name (count records))
       (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
 
@@ -98,7 +100,7 @@
         (when (seq records)
           (.commitSync c))
         ;; and continue
-        (recur (k/poll c 5000))))))
+        (recur (k/poll c poll-interval))))))
 
 
 
@@ -119,10 +121,9 @@
   producer and consumer are setup with the avro serdes from the
   viooh.mirror.serde namespace which automatically create the schemas
   in the destination cluster."
-  [group-id-prefix serdes {:keys [name source destination] :as mirror-cfg}]
+  [{:keys [consumer-group-id name source destination serdes] :as mirror-cfg}]
   (let [closed? (atom false)
         p (promise)
-        group-id (str/join "_" [group-id-prefix name])
         src-schema-registry-url (:schema-registry-url source)
         dest-schema-registry-url (:schema-registry-url destination)
         src-topic-cfg (:topic source)
@@ -130,23 +131,23 @@
         dest-topic-cfg (:topic destination)
         dest-topic (:topic-name dest-topic-cfg)
         src-serdes (s/serdes serdes src-schema-registry-url)
-        dest-serdes (s/serdes serdes dest-schema-registry-url)]
+        dest-serdes (s/serdes serdes dest-schema-registry-url)
+        destination (update destination :kafka with-ssl-options)]
     (future
       (log/infof "[%s] Starting mirror" name)
       (safely
        (when-not @closed?
          ;; TODO: mirror subjects even before start consuming
          ;; TODO: check if you need to create topic
-         (with-open [c (consumer group-id source src-serdes)
-                     p (producer (update destination :kafka with-ssl-options)
-                                 dest-serdes)]
+         (with-open [c (consumer consumer-group-id source src-serdes)
+                     p (producer destination dest-serdes)]
 
            (k/subscribe c [src-topic-cfg])
            (log/info "Subscribed to source using topic config:" src-topic-cfg)
-           (mirror mirror-cfg group-id c p dest-topic-cfg closed?)))
+           (mirror mirror-cfg c p closed?)))
        :on-error
        :max-retries :forever
-       :track-as (format "vioohmirror.init.%s" group-id))
+       :track-as (format "vioohmirror.init.%s" name))
 
       (log/infof "[%s] Stopping mirror" name)
       (deliver p true))
@@ -155,11 +156,8 @@
 
 
 
-(defmethod ig/init-key ::mirrors [_ {:keys [group-id-prefix mirrors] :as cfg}]
-  (let [stop-fns (doall
-                  (map (fn [{:keys [serdes] :as mirror}]
-                         (start-mirror group-id-prefix serdes mirror))
-                       mirrors))]
+(defmethod ig/init-key ::mirrors [_ {:keys [groups] :as cfg}]
+  (let [stop-fns (doall (map start-mirror (mapcat :mirrors groups)))]
     (log/info "Started all mirrors")
     stop-fns))
 

@@ -13,19 +13,28 @@
 
 
 (def DEFAULT-CONFIG
-  {:group-id-prefix "foggy"
-   ;; :mirrors
-   ;; [{:name "mirror"
-   ;;   :source
-   ;;   {:kafka {:bootstrap.servers "localhost:9092"
-   ;;            :auto.offset.reset "earliest"}
-   ;;    :topic {:topic-name "mirror_test"}
-   ;;    :schema-registry-url "http://localhost:8081"}
+  {
+   ;;:groups
+   ;;[
+   ;; {:group-id-prefix "foggy"
+   ;;
+   ;;  :source
+   ;;  {:kafka {:bootstrap.servers "localhost:9092"
+   ;;           :auto.offset.reset "earliest"}
+   ;;   :schema-registry-url "http://localhost:8081"}
+   ;;
+   ;;  :destination
+   ;;  {:kafka {:bootstrap.servers "localhost:9092"}
+   ;;   :schema-registry-url "http://localhost:8081"}
+   ;;
+   ;;  :mirrors
+   ;;  [{:source      {:topic {:topic-name "mirror_test"}}
+   ;;    :destination {:topic {:topic-name "mirror_test_copy_4"}}}]
+   ;;
+   ;;  }
+   ;;
+   ;; ]
 
-   ;;   :destination
-   ;;   {:kafka {:bootstrap.servers "localhost:9092"}
-   ;;    :topic {:topic-name "mirror_test_copy_4"}
-   ;;    :schema-registry-url "http://localhost:8081"}}]
 
    :metrics
    {;; type can be `:console` or `:prometheus`, or any if the TrackIt
@@ -49,21 +58,10 @@
 
 
 (def DEFAULT-MIRROR-CONFIG
-  {:mirror-mode :strict
-   :subject-naming-strategy :topic-name})
+  {:mirror-mode             :strict
+   :subject-naming-strategy :topic-name
+   :poll-interval           10000})
 
-
-(defn- apply-mirrors-defaults
-  [cfg]
-  (update cfg :mirrors (partial mapv (partial merge DEFAULT-MIRROR-CONFIG))))
-
-
-
-(defn- apply-config-defaults
-  [cfg]
-  (->> cfg
-   (deep-merge DEFAULT-CONFIG)
-   (apply-mirrors-defaults)))
 
 
 (defn env
@@ -84,6 +82,51 @@
 
 
 
+(defn- apply-single-mirror-default
+  "given the configuration of a single mirror, and the configuration of a group
+  it merges the two configurations and applies the defautls"
+  [group-config mirror-config]
+  (as-> mirror-config $
+
+    ;; applied the mirror level defaults and the group level defaults
+    (deep-merge DEFAULT-MIRROR-CONFIG (dissoc group-config :mirrors :name) $)
+
+    ;; if a name is not provided it generates based on the source and destination topics
+    (update $ :name (fn [name]
+                      (or name
+                         (format "%s__%s"
+                                 (get-in $ [:source :topic :topic-name])
+                                 (get-in $ [:destination :topic :topic-name])))))
+
+    ;; it add the groups prefix to the name (when defined)
+    (update $ :name (fn [name]
+                      (if (:group-id-prefix group-config)
+                        (format "%s__%s" (:group-id-prefix group-config) name)
+                        name)))
+
+    ;; if not set, it generates a standard consumer-group-id
+    (update $ :consumer-group-id (fn [cgid]
+                                   (or cgid
+                                      (format "%s.viooh-mirror.%s"
+                                              (env) (:name $)))))))
+
+
+
+
+(defn- apply-config-defaults
+  "Applied the default configuration"
+  [cfg]
+  (as-> cfg $
+     (deep-merge DEFAULT-CONFIG $)
+     (update $ :groups
+             (partial mapv
+                (fn [group]
+                  (update group :mirrors
+                          (partial mapv (partial apply-single-mirror-default group))))))))
+
+
+
+
 (defn config-key
   "returns the current environmet the system is running in.
    This has to be provided by the infrastructure"
@@ -97,9 +140,10 @@
   resources"
   []
   (-> "title.txt"
-      io/resource slurp
-      (format (version))
-      println))
+     io/resource slurp
+     (format (version))
+     println))
+
 
 
 (defn start-metrics!
@@ -107,6 +151,7 @@
   [{:keys [metrics] :as config}]
   (when (:type metrics)
     (trackit/start-reporting! metrics)))
+
 
 
 (defn -main
