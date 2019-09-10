@@ -5,7 +5,6 @@
             [clojure.walk :refer [stringify-keys]]
             [safely.core :refer [safely]]
             [clojure.tools.logging :as log]
-            [jackdaw.serdes.avro.schema-registry :as sr]
             [clojure.string :as str]
             [integrant.core :as ig]
             [samsara.trackit :refer [track-rate]]
@@ -29,7 +28,7 @@
         fixed-cfg   {:enable.auto.commit false}
         merged-cfg  (-> (merge default-cfg (:kafka cfg) fixed-cfg)
                        (update :max.poll.interval.ms int)
-                        stringify-keys)]
+                       stringify-keys)]
     (log/info "Creating a Kafka Consumer for group-id" group-id
               "and serdes:" serdes)
     (k/consumer merged-cfg serdes)))
@@ -41,7 +40,7 @@
   viooh.mirror.serde namespace."
   [cfg serdes]
   (let [p-cfg (-> (:kafka cfg)
-                  stringify-keys)]
+                 stringify-keys)]
     (log/info "Creating a Kafka Producer using serdes:" serdes)
     (k/producer p-cfg serdes)))
 
@@ -54,33 +53,53 @@
 
 
 
+(defn- yield-on-new-value
+  "returns the value when it hasn't been observed before.
+  NOTE: (not suitable for high cardinality properties)
+  "
+  []
+  (let [observed (volatile! #{})]
+    (fn [value]
+      (when-not (@observed value)
+        (vswap! observed conj value)
+        value))))
+
+
+
 (defn mirror
   "Polls records from the consumer `c`, and sends them to the
   destination topic using the producer supplied in a loop. If the
   production fails, the same records are tried again. The loop exits
   if `closed?` is set to true."
-  [mirror-name ^KafkaConsumer c ^KafkaProducer p dest-topic value-schema-mirror closed?]
-  (loop [records (k/poll c 3000)]
-    (log/infof "[%s] Got %s records" mirror-name (count records))
-    (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
+  [mirror-cfg mirror-name ^KafkaConsumer c ^KafkaProducer p dest-topic closed?]
+  (let [is-new-schema? (yield-on-new-value)]
+    (loop [records (k/poll c 5000)]
+      (log/infof "[%s] Got %s records" mirror-name (count records))
+      (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
 
-    ;; send each record to destination kafka/topic
-    (doseq [{:keys [key value headers timestamp] :as r} records]
-      (safely
-       (when-not @closed?
-         (value-schema-mirror value)
-         @(k/send! p (->ProducerRecord dest-topic timestamp key value headers)))
-       :on-error
-       :max-retries :forever
-       :track-as (format "vioohmirror.messages.send.%s" mirror-name)))
+      ;; send each record to destination kafka/topic
+      (doseq [{:keys [key value headers timestamp] :as r} records]
+        (safely
+         (when-not @closed?
+           ;; When a new schema is detected, the mirror-schema
+           ;; will repair all missing schemas.
+           (when (is-new-schema? (sm/avro-schema value))
+             (sm/mirror-schemas mirror-cfg))
 
-    ;; commit checkpoint
-    (when-not @closed?
+           ;; TODO: use kafka trx to batch send requests
+           @(k/send! p (->ProducerRecord dest-topic timestamp key value headers)))
+         :on-error
+         :max-retries :forever
+         :track-as (format "vioohmirror.messages.send.%s" mirror-name)))
 
-      (when (seq records)
-        (.commitSync c))
-      ;; and continue
-      (recur (k/poll c 3000)))))
+      ;; commit checkpoint
+      (when-not @closed?
+
+        (when (seq records)
+          (.commitSync c))
+        ;; and continue
+        (recur (k/poll c 5000))))))
+
 
 
 (defn- with-ssl-options
@@ -110,23 +129,21 @@
         src-topic (:topic-name src-topic-cfg)
         dest-topic-cfg (:topic destination)
         dest-topic (:topic-name dest-topic-cfg)
-        src-registry (sr/client src-schema-registry-url (or (:max-capacity source) 128))
-        dest-registry (sr/client dest-schema-registry-url (or (:max-capacity destination) 128))
-        src-serdes (s/serdes serdes src-registry)
-        dest-serdes (s/serdes serdes dest-registry)
-        value-schema-mirror (sm/create-schema-mirror src-registry dest-registry
-                                                     src-topic dest-topic false)]
+        src-serdes (s/serdes serdes src-schema-registry-url)
+        dest-serdes (s/serdes serdes dest-schema-registry-url)]
     (future
       (log/infof "[%s] Starting mirror" name)
       (safely
        (when-not @closed?
+         ;; TODO: mirror subjects even before start consuming
+         ;; TODO: check if you need to create topic
          (with-open [c (consumer group-id source src-serdes)
                      p (producer (update destination :kafka with-ssl-options)
                                  dest-serdes)]
 
            (k/subscribe c [src-topic-cfg])
            (log/info "Subscribed to source using topic config:" src-topic-cfg)
-           (mirror group-id c p dest-topic-cfg value-schema-mirror closed?)))
+           (mirror mirror-cfg group-id c p dest-topic-cfg closed?)))
        :on-error
        :max-retries :forever
        :track-as (format "vioohmirror.init.%s" group-id))
@@ -145,6 +162,8 @@
                        mirrors))]
     (log/info "Started all mirrors")
     stop-fns))
+
+
 
 (defmethod ig/halt-key! ::mirrors [_ stop-fns]
   (let [p (doall (map #(%) stop-fns))]

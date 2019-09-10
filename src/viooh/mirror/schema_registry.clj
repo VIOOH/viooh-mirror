@@ -7,6 +7,7 @@
    [org.apache.avro Schema]))
 
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;                                                                            ;;
 ;;        ----==| S C H E M A   R E G I S T R Y   C L I E N T |==----         ;;
@@ -193,6 +194,7 @@
          (deleteSubject subject)))))
 
 
+
 (defn delete-version
   "Given a subject and a schema version it removes it if found and
   returns the list of deleted versions"
@@ -208,33 +210,3 @@
   "Given a Avro schema as a string returns a Avro RecordSchema object"
   [^String schema]
   (Schema/parse schema))
-
-
-(comment
-
-  (def url "https://schema-registry.dev.develop.farm")
-
-  (subjects url)
-
-  (versions url "prd.datariver.prv_DigitalReservation-value")
-
-  (schema-metadata url "prd.datariver.prv_DigitalReservation-value" 1)
-
-  (->> (schema-metadata url "prd.datariver.prv_DigitalReservation-value" 1)
-     :schema
-     parse-schema)
-
-  (retrieve-schema url 5)
-  (retrieve-schema url 451 "prd.datariver.prv_DigitalReservation-value")
-
-  (schema-version url "prd.datariver.prv_DigitalReservation-value" (retrieve-schema url 5))
-
-  (subject-compatibility url "prd.datariver.prv_DigitalReservation-value" )
-
-  (register-schema url "test" sc1)
-  (delete-subject url "test")
-
-  (delete-version url "test" 5)
-
-  (update-subject-compatibility url "test" "FORWARD_TRANSITIVE")
-  )

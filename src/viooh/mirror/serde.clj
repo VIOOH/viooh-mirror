@@ -1,19 +1,19 @@
 (ns viooh.mirror.serde
   (:require [jackdaw.serdes :refer [string-serde]]
-            [jackdaw.serdes.avro.schema-registry :as sr]
-            [clojure.set :refer [difference union]])
-  (:import [io.confluent.kafka.serializers KafkaAvroDeserializer KafkaAvroSerializer]
+            [viooh.mirror.schema-registry :as r])
+  (:import [io.confluent.kafka.serializers
+            KafkaAvroDeserializer KafkaAvroSerializer]
            [org.apache.kafka.common.serialization Serdes]))
 
 (defn- avro-serializer
-  [schema-registry]
-  (KafkaAvroSerializer. schema-registry))
+  [url]
+  (KafkaAvroSerializer. (r/schema-registry url)))
 
 
 
 (defn- avro-deserializer
-  [schema-registry]
-  (KafkaAvroDeserializer. schema-registry))
+  [url]
+  (KafkaAvroDeserializer. (r/schema-registry url)))
 
 
 

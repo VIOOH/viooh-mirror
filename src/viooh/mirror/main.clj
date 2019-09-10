@@ -48,6 +48,24 @@
 
 
 
+(def DEFAULT-MIRROR-CONFIG
+  {:mirror-mode :strict
+   :subject-naming-strategy :topic-name})
+
+
+(defn- apply-mirrors-defaults
+  [cfg]
+  (update cfg :mirrors (partial mapv (partial merge DEFAULT-MIRROR-CONFIG))))
+
+
+
+(defn- apply-config-defaults
+  [cfg]
+  (->> cfg
+   (deep-merge DEFAULT-CONFIG)
+   (apply-mirrors-defaults)))
+
+
 (defn env
   "returns the current environmet the system is running in.
    This has to be provided by the infrastructure"
@@ -96,7 +114,7 @@
   (print-vanity-title)
   (log/infof "Starting viooh-mirror v%s in env: '%s'" (version) (env))
   (let [cfg (:value (configure {:key (config-key) :env (env) :version (version)}))
-        cfg (deep-merge DEFAULT-CONFIG cfg)]
+        cfg (apply-config-defaults cfg)]
 
     (start-metrics! cfg)
     (ig/init {::http-server/server {}
