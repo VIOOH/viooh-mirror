@@ -118,6 +118,31 @@ the schemas are automatically created in the destination cluster.
     ]
 
 
+   ;; This section controls what to do if topics on the destination side
+   ;; do not exist. This could be used if the cluster has the auto-create
+   ;; topics disabled.
+   :topics-mirroring
+   {;; whether or not the mirror should create the topics explicitly
+    ;; on the destination cluster when the topic doesn't exists
+    :auto-create-topics true
+
+    ;; If the topic is create, which replication factor should be used
+    ;; for a production environment we recommend to use at least 3.
+    :replication-factor
+    ;; Type can be either `:fix` or `:mirror-source`
+    {:type :fix :value 3}
+    ;; here an example of :mirror-source
+    ;; {:type :mirror-source :min 3 :max 12}
+
+    ;; The partition-count controls the number of partitions
+    ;; for the new topic.
+    :partition-count
+    ;; Type can be either `:fix` or `:mirror-source`
+    {:type :mirror-source :min 3 :max 12}}
+   ;; here an example of :fix
+   ;; {:type :fix :value 3}
+
+
    :metrics
    {;; type can be `:console` or `:prometheus`, or any if the TrackIt
     ;; supported reporters, or use `nil` to disable it

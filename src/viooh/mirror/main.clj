@@ -8,7 +8,8 @@
             [clojure.java.io :as io]
             [clojure.tools.reader.edn :as edn]
             [integrant.core :as ig]
-            [samsara.trackit :as trackit]))
+            [samsara.trackit :as trackit]
+            [kafka-ssl-helper.core  :as ssl-helper]))
 
 
 
@@ -109,6 +110,30 @@
     ;; more groups can be added
     ]
 
+   ;; This section controls what to do if topics on the destination side
+   ;; do not exist. This could be used if the cluster has the auto-create
+   ;; topics disabled.
+   :topics-mirroring
+   {;; whether or not the mirror should create the topics explicitly
+    ;; on the destination cluster when the topic doesn't exists
+    :auto-create-topics true
+
+    ;; If the topic is create, which replication factor should be used
+    ;; for a production environment we recommend to use at least 3.
+    :replication-factor
+    ;; Type can be either `:fix` or `:mirror-source`
+    {:type :fix :value 3}
+    ;; here an example of :mirror-source
+    ;; {:type :mirror-source :min 3 :max 12}
+
+    ;; The partition-count controls the number of partitions
+    ;; for the new topic.
+    :partition-count
+    ;; Type can be either `:fix` or `:mirror-source`
+    {:type :mirror-source :min 3 :max 12}}
+   ;; here an example of :fix
+   ;; {:type :fix :value 3}
+
 
    :metrics
    {;; type can be `:console` or `:prometheus`, or any if the TrackIt
@@ -156,6 +181,16 @@
 
 
 
+(defn with-ssl-options
+  "Takes a consumer/producer config and wraps ssl options (keystores, etc...)"
+  [{:keys [private-key ca-cert-pem cert-pem] :as config}]
+  (if (and private-key ca-cert-pem cert-pem)
+    (merge (dissoc config :private-key :cert-pem :ca-cert-pem)
+           (ssl-helper/ssl-opts config))
+    config))
+
+
+
 (defn- apply-single-mirror-default
   "given the configuration of a single mirror, and the configuration of a group
   it merges the two configurations and applies the defautls"
@@ -182,8 +217,11 @@
     (update $ :consumer-group-id (fn [cgid]
                                    (or cgid
                                       (format "%s.viooh-mirror.%s"
-                                              (env) (:name $)))))))
+                                              (env) (:name $)))))
 
+    ;; add SSL configuration to kafka source and destination if necessary
+    (update-in $ [:source :kafka] with-ssl-options)
+    (update-in $ [:destination :kafka] with-ssl-options)))
 
 
 
@@ -191,13 +229,13 @@
   "Applied the default configuration"
   [cfg]
   (as-> cfg $
-     (deep-merge DEFAULT-CONFIG $)
-     (update $ :groups
-             (partial mapv
-                (fn [group]
-                  (update group :mirrors
-                          (partial mapv (partial apply-single-mirror-default group))))))))
-
+    (deep-merge DEFAULT-CONFIG $)
+    (update $ :groups
+            (partial mapv
+               (fn [group]
+                 (let [group (deep-merge (select-keys $ [:topics-mirroring]) group)]
+                   (update group :mirrors
+                           (partial mapv (partial apply-single-mirror-default group)))))))))
 
 
 

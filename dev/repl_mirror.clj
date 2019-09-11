@@ -1,6 +1,7 @@
 (ns repl-mirror
   (:use viooh.mirror.mirror)
   (:require [jackdaw.client :as k]
+            [jackdaw.admin :as ka]
             [viooh.mirror.serde :as s]
             [viooh.mirror.schema-mirror :as sm]
             [clojure.walk :refer [stringify-keys]]
@@ -16,7 +17,7 @@
 
   (def mirror-cfg
     (#'viooh.mirror.main/apply-single-mirror-default
-     {}
+     (select-keys viooh.mirror.main/DEFAULT-CONFIG [:topics-mirroring])
      {:mirror-mode :lenient
       :source
       {:kafka {:bootstrap.servers "kf1.dataplatform.jcdecaux.com:9092,kf2.dataplatform.jcdecaux.com:9092,kf3.dataplatform.jcdecaux.com:9092"

@@ -1,5 +1,6 @@
 (ns viooh.mirror.mirror
   (:require [jackdaw.client :as k]
+            [jackdaw.admin :as ka]
             [viooh.mirror.serde :as s]
             [viooh.mirror.schema-mirror :as sm]
             [clojure.walk :refer [stringify-keys]]
@@ -7,13 +8,108 @@
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [integrant.core :as ig]
-            [samsara.trackit :refer [track-rate]]
-            [kafka-ssl-helper.core  :as ssl-helper])
+            [samsara.trackit :refer [track-rate]])
   (:import [org.apache.kafka.clients.consumer KafkaConsumer]
            [org.apache.kafka.clients.producer KafkaProducer]
            [org.apache.kafka.clients.producer
             ProducerRecord RecordMetadata]
+           [org.apache.kafka.clients.admin AdminClient]
            [org.apache.kafka.common.header Headers]))
+
+
+
+(defn- wait-for-topic-ready?
+  [^AdminClient admin-client {:keys [topic-name] :as topic}
+   & {:keys [max-retries] :or {max-retries :forever}}]
+  (safely
+   (->>
+    (ka/describe-topics admin-client [topic])
+    (every? (fn [[topic-name {:keys [partition-info]}]]
+              (every? (fn [part-info]
+                        (and (boolean (:leader part-info))
+                           (seq (:isr part-info))))
+                      partition-info))))
+   :on-error
+   :max-retries max-retries
+   :retry-delay [:random 3000 :+/- 0.30]
+   :failed? #(not %)
+   :log-stacktrace false
+   :message (format "Waiting for the topic %s to become ready." topic-name)))
+
+
+
+(defn- describe-topic
+  [^AdminClient admin-client {:keys [topic-name] :as topic}]
+  (safely
+   (-> (ka/describe-topics admin-client [topic]) vals first)
+   :on-error
+   :default nil
+   :log-stacktrace false
+   :message (str "reading status of topic:" topic-name)))
+
+
+
+(defn ensure-topic!
+  "It ensures that the given topic exists in the given kafka cluster.
+  If not present it will create the topic and wait until the topic is
+  ready."
+  [kafka-cfg {:keys [topic-name] :as topic}]
+  {:pre [(:bootstrap.servers kafka-cfg) (:topic-name topic)
+         (:partition-count topic) (:replication-factor topic)]}
+
+  ;; TODO: this should be done in the general conf.
+  (safely
+   (log/infof "Ensuring topic %s exists and it is ready to use." topic-name)
+   (with-open [^java.lang.AutoCloseable admin (ka/->AdminClient (stringify-keys kafka-cfg))]
+     ;; create if not exists
+     (when-not (describe-topic admin topic)
+       (log/infof "Creating topic '%s' in destination cluster" topic-name)
+       (ka/create-topics! admin [topic]))
+
+     ;; wait for the topic to become ready
+     (wait-for-topic-ready? admin topic :max-retries 10))
+   :on-error
+   :max-retries :forever
+   :message (format "Ensuring topic %s exists and it is ready." topic-name)))
+
+
+;;
+;; Utility function to decide best values for mirroring
+;; out of a number of strategies:
+;; examples are: {:type :fix :val 3}, or {:type :mirror-source :min 3 :max 12}
+;;
+(defmulti config-value-mirror
+  (fn [{:keys [type]} _] type))
+
+
+
+(defmethod config-value-mirror :fix
+  [{:keys [value]} proposed-value]
+  value)
+
+
+
+(defmethod config-value-mirror :mirror-source
+  [{low :min high :max} proposed-value]
+  (min high (max low proposed-value)))
+
+
+
+(defn mirror-kafka-topic-configuration!
+  [{:keys [source destination topics-mirroring] :as mirror-cfg}]
+  (let [src-info (with-open [^java.lang.AutoCloseable admin (ka/->AdminClient (stringify-keys (:kafka source)))]
+                   (describe-topic admin (:topic source)))
+        partitions (-> src-info :partition-info count)
+        replicas   (-> src-info :partition-info first :replicas count)]
+    (when-not src-info
+      (throw (ex-info "Source topic doesn't exists" (:topic source))))
+
+    (let [partitions (config-value-mirror (:partition-count topics-mirroring) (or partitions 0))
+          replicas   (config-value-mirror (:replication-factor topics-mirroring) (or replicas 0))
+          dest-topic (merge {:partition-count partitions :replication-factor replicas} (:topic destination))]
+
+      ;; ensure topic exists in destination cluster
+      (ensure-topic! (:kafka destination) dest-topic))))
 
 
 
@@ -104,16 +200,6 @@
 
 
 
-(defn- with-ssl-options
-  "Takes a consumer/producer config and wraps ssl options (keystores, etc...)"
-  [{:keys [private-key ca-cert-pem cert-pem] :as config}]
-  (if (and private-key ca-cert-pem cert-pem)
-    (merge (dissoc config :private-key :cert-pem :ca-cert-pem)
-           (ssl-helper/ssl-opts config))
-    config))
-
-
-
 (defn start-mirror
   "Starts a `mirror`.A `mirror` is a consumer loop that sends each record
   received from the source topic to the destination topic. source and
@@ -131,16 +217,19 @@
         dest-topic-cfg (:topic destination)
         dest-topic (:topic-name dest-topic-cfg)
         src-serdes (s/serdes serdes src-schema-registry-url)
-        dest-serdes (s/serdes serdes dest-schema-registry-url)
-        destination (update destination :kafka with-ssl-options)]
+        dest-serdes (s/serdes serdes dest-schema-registry-url)]
     (future
       (log/infof "[%s] Starting mirror" name)
       (safely
        (when-not @closed?
          ;; TODO: mirror subjects even before start consuming
-         ;; TODO: check if you need to create topic
-         (with-open [c (consumer consumer-group-id source src-serdes)
-                     p (producer destination dest-serdes)]
+
+         ;; ensuring that the destination topic exists
+         (when (get-in mirror-cfg [:topics-mirroring :auto-create-topics] true)
+           (mirror-kafka-topic-configuration! mirror-cfg))
+
+         (with-open [^java.lang.AutoCloseable c (consumer consumer-group-id source src-serdes)
+                     ^java.lang.AutoCloseable p (producer destination dest-serdes)]
 
            (k/subscribe c [src-topic-cfg])
            (log/info "Subscribed to source using topic config:" src-topic-cfg)
