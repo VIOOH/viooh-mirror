@@ -40,6 +40,11 @@ the schemas are automatically created in the destination cluster.
      ;; This is prefixed on all mirror `:name`
      :group-id-prefix "prod"
 
+     ;; This flag defines whether the whole group should be mirrored or not.
+     ;; the default is `true`, if set to `false` the mirror for this topic
+     ;; will NOT be started
+     ;; :enabled true
+
      ;; the mirroring strategy used for the whole group. Currently we
      ;; support two modes `:strict` (default) and `:lenient`. The
      ;; Strict mode will attempt to have an exact copy of the subjects
@@ -90,6 +95,11 @@ the schemas are automatically created in the destination cluster.
      [{;; the name of the particular mirror. If not defined it will be automatically
        ;; generated to be the name of the source and destination topics.
        ;;:name "<prefix>__<source-topic>__<dest-topic>"
+
+       ;; This flag defines whether this mirror should be started or not.
+       ;; the default is `true`, if set to `false` the mirror for this topic
+       ;; will NOT be started
+       ;; :enabled true
 
        ;; The group-id for the consumer. This will be used for checkpointing and load
        ;; and load-balancing. It is important that it is consistent over time.

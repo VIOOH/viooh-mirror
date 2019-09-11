@@ -246,7 +246,7 @@
 
 
 (defmethod ig/init-key ::mirrors [_ {:keys [groups] :as cfg}]
-  (let [stop-fns (doall (map start-mirror (mapcat :mirrors groups)))]
+  (let [stop-fns (->> groups (mapcat :mirrors) (filter :enabled) (map start-mirror) doall)]
     (log/info "Started all mirrors")
     stop-fns))
 
