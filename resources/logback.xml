@@ -33,6 +33,10 @@
             <value>${HOSTNAME}</value>
           </property>
           <property>
+            <name>host.name</name>
+            <value>${ENV}</value>
+          </property>
+          <property>
             <name>exception</name>
             <value>%xThrowable{full}</value>
           </property>
