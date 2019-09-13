@@ -33,7 +33,7 @@
             <value>${HOSTNAME}</value>
           </property>
           <property>
-            <name>host.name</name>
+            <name>environment</name>
             <value>${ENV}</value>
           </property>
           <property>
