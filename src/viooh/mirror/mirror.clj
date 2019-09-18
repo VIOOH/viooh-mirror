@@ -176,19 +176,22 @@
       (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
 
       ;; send each record to destination kafka/topic
-      (doseq [{:keys [key value headers timestamp] :as r} records]
-        (safely
-         (when-not @closed?
-           ;; When a new schema is detected, the mirror-schema
-           ;; will repair all missing schemas.
-           (when (is-new-schema? (sm/avro-schema value))
-             (sm/mirror-schemas mirror-cfg))
+      (->> records
+         (map (fn [{:keys [key value headers timestamp] :as r}]
+                (safely
+                 (when-not @closed?
+                   ;; When a new schema is detected, the mirror-schema
+                   ;; will repair all missing schemas.
+                   (when (is-new-schema? (sm/avro-schema value))
+                     (sm/mirror-schemas mirror-cfg))
 
-           ;; TODO: use kafka trx to batch send requests
-           @(k/send! p (->ProducerRecord dest-topic timestamp key value headers)))
-         :on-error
-         :max-retries :forever
-         :track-as (format "vioohmirror.messages.send.%s" mirror-name)))
+                   ;; returns a java future
+                   (k/send! p (->ProducerRecord dest-topic timestamp key value headers)))
+                 :on-error
+                 :max-retries :forever
+                 :track-as (format "vioohmirror.messages.send.%s" mirror-name))))
+         ;; wait for all the send to be acknowledged before moving forward
+         (run! deref))
 
       ;; commit checkpoint
       (when-not @closed?
