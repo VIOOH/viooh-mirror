@@ -193,3 +193,9 @@ To look for the number of messages which are being sent to the mirrored kafka lo
 `vioohmirror.messages.send.<group-id-prefix>_<mirror-name>.inner_errors.(count|1min_rate)`.
 
 Circuit breakers are set around the source and destination schema-registry for the various operations.
+
+## Load
+
+One single `c5.large` instance can process ~15K msg/s (v0.7.0)
+
+![load](./doc/mirror-load.png)
