@@ -196,6 +196,6 @@ Circuit breakers are set around the source and destination schema-registry for t
 
 ## Load
 
-One single `c5.large` instance can process ~15K msg/s (v0.7.0)
+One single `c5.large` instance can process ~25K msg/s (v0.7.1)
 
 ![load](./doc/mirror-load.png)
