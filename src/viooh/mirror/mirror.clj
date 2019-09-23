@@ -190,6 +190,9 @@
                  :on-error
                  :max-retries :forever
                  :track-as (format "vioohmirror.messages.send.%s" mirror-name))))
+         ;; realize the entire sequence to avoid the small batching effect
+         ;; of the chunked sequences as batches are too small.
+         (doall)
          ;; wait for all the send to be acknowledged before moving forward
          (run! deref))
 
