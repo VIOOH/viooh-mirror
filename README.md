@@ -207,9 +207,9 @@ One single `c5.large` instance can process ~25K msg/s (v0.7.1)
     - Every commit is pushed to DEV as build-number and `master`
   - UAT
      - Put a tag and push the Tag.
-     - Build the tag from (Jenkins)[https://jenkins.mgmt.develop.farm/job/VIOOH/job/viooh-mirror/view/tags/]
+     - Build the tag from [Jenkins](https://jenkins.mgmt.develop.farm/job/VIOOH/job/viooh-mirror/view/tags/)
      - Every build pushes the container with the tag name and `stable`
   - PRD
      - Release and test in UAT first
-     - Promote the artifact on (Jenkins)[https://jenkins.mgmt.develop.farm/job/BigData/job/lab/view/Devops%20jobs/job/promote-artifact-to-prod/]
+     - Promote the artifact on [Jenkins](https://jenkins.mgmt.develop.farm/job/BigData/job/lab/view/Devops%20jobs/job/promote-artifact-to-prod/)
      - Every promotion pushes the container with the tag anme and `stable`
