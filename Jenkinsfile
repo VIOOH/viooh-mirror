@@ -14,7 +14,7 @@ node{
     }
 
     stage("Package") {
-        if(env.BRANCH_NAME == 'master'){
+        if(env.BRANCH_NAME == 'master' || env.TAG_NAME != null ){
         sh """
           sudo docker build . -t viooh-mirror:${env.BUILD_NUMBER}
           sudo docker tag viooh-mirror:${env.BUILD_NUMBER} 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:${env.BUILD_NUMBER}
@@ -26,7 +26,7 @@ node{
         }
    }
 
-stage("Push tag") {         
+   stage("Push tag") {
 
         if(env.TAG_NAME != null){
         sh """
