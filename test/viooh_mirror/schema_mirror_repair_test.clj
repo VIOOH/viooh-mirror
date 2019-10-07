@@ -584,6 +584,56 @@
 
 
 (fact
+ "repair->analyse-schema-versions-lenient: if the source has
+ additional schemas which are not in the destination, then a register
+ action for each new schema must be issued. This should work even
+ if the destination has no schemas at all"
+
+
+ (->>
+  {:source
+   {:schema-registry "source-schema-registry",
+    :subject "source-subject-value",
+    :compatibility nil,
+    :global-compatibility "NONE",
+    :versions
+    [{:id 181, :version 1, :schema :schema1}
+     {:id 482, :version 2, :schema :schema2}
+     {:id 652, :version 3, :schema :schema3}
+     {:id 680, :version 4, :schema :schema4}]},
+
+   :destination
+   {:schema-registry "destination-schema-registry",
+    :subject "destination-subject-value",
+    :compatibility "NONE"
+    :global-compatibility "FORWARD_TRANSITIVE",
+    :versions
+    []}}
+  (analyse-schema-versions-lenient)
+  (repair-actions))
+
+ => [{:action :register-schema,
+     :schema-registry "destination-schema-registry",
+     :subject "destination-subject-value",
+     :schema :schema1}
+    {:action :register-schema,
+     :schema-registry "destination-schema-registry",
+     :subject "destination-subject-value",
+     :schema :schema2}
+    {:action :register-schema,
+     :schema-registry "destination-schema-registry",
+     :subject "destination-subject-value",
+     :schema :schema3}
+    {:action :register-schema,
+     :schema-registry "destination-schema-registry",
+     :subject "destination-subject-value",
+     :schema :schema4}]
+
+ )
+
+
+
+(fact
  "repair->analyse-schema-versions-lenient: if the destination subject
   has a common subset of schemas with the source but in a different
   relative ordering, then it should fail as it could be a breach of

@@ -38,9 +38,9 @@
        :tag CachedSchemaRegistryClient}
   schema-registry
   (memoize
-   (fn
+   (fn schema-registry-direct
      ([^String url]
-      (schema-registry url 256))
+      (schema-registry-direct url 256))
      ([^String url ^long capacity]
       (CachedSchemaRegistryClient. url capacity)))))
 

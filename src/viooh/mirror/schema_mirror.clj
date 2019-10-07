@@ -317,7 +317,7 @@
 ;; rules) are respected for the given subject.
 ;; -------------------------------------------------------------------
 (defmethod repair-actions :analyse-schema-versions-lenient
-  [{:keys [test dst-schema-registry dst-subject missing matches?]
+  [{:keys [test dst-schema-registry dst-subject dst missing matches?]
     :as data}]
   (when-not test
     ;; It can only be repaired if the source has some newer (missing)
@@ -327,7 +327,9 @@
     (if (and ;; check if there are missing schemas to be added
          (seq missing)
          ;; check that both have a common set of schemas
-         (= (dedupe matches?) [true false]))
+         (or (= (dedupe matches?) [true false])
+            ;; OR the destination has no schema registered
+            (= dst 0)))
       ;; generate an action for every schema to add
       (map (fn [s]
              {:action :register-schema
@@ -408,14 +410,13 @@
         dst-subject   (subject-name subject-naming-strategy dst-topic :value)
         diff          (compare-subjects src-registry src-subject
                                         dst-registry dst-subject)
-        compatibility (analyse-compatibility diff)
-        compat-repair (repair-actions compatibility)]
+        compatibility (analyse-compatibility diff)]
 
     (or
      ;;
      ;; If the compatibility need repaired, then run this one first
      ;;
-     (-> diff analyse-compatibility repair-actions)
+     (repair-actions compatibility)
 
      ;;
      ;; if compatibility doesn't need repairs, then analyse schemas
@@ -428,8 +429,12 @@
         (and (= mirror-mode :lenient) (= "NONE" (:dst-level compatibility)))
         (analyse-schema-versions-lenient-unordered diff)
 
-        (and (= mirror-mode :lenient) (= "NONE" (:dst-level compatibility)))
-        (analyse-schema-versions-lenient diff))
+        (and (= mirror-mode :lenient) (not= "NONE" (:dst-level compatibility)))
+        (analyse-schema-versions-lenient diff)
+
+        :else
+        (throw (ex-info "Unhandled mirroring mode."
+                        {:mirror-mode mirror-mode :dst-level compatibility})))
       repair-actions))))
 
 
