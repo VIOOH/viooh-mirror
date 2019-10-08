@@ -13,6 +13,13 @@ node{
         }
     }
 
+    stage("Cleanup containers") {
+        sh """
+          sudo docker images | grep viooh-mirror | awk '{print \$3}' | xargs -I{} sudo docker rmi -f {}
+          """
+   }
+
+
     // container tags: BUILD_NUMBER, master
     stage("Package master") {
         if(env.BRANCH_NAME == 'master'){
