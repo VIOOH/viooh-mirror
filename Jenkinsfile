@@ -13,7 +13,7 @@ node{
         }
     }
 
-    stage("Cleanup containers") {
+    stage("Cleanup images") {
         sh """
           sudo docker images | grep viooh-mirror | awk '{print \$3}' | xargs -I{} sudo docker rmi -f {}
           """
@@ -46,7 +46,8 @@ node{
           sudo docker tag viooh-mirror:${env.TAG_NAME} 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:stable
           DOCKER_LOGIN="sudo \$(aws ecr get-login --no-include-email --region=eu-west-1 --registry-ids 517256697506)"
           eval "\$DOCKER_LOGIN"
-          sudo docker push 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror
+          sudo docker push 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:${env.TAG_NAME}
+          sudo docker push 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:stable
           """
         }
    }
