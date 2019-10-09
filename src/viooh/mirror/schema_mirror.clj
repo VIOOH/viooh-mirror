@@ -119,7 +119,12 @@
     {:source
      {:schema-registry src-registry
       :subject src-subject
-      :compatibility        (sr/subject-compatibility src-registry src-subject)
+      ;; if the `subject-compatibility-level` for the destination has been
+      ;; forced to a specific level, the use the given level
+      ;; so that it looks like it was the actual level form the source
+      ;; and if repair actions are required will be automatically performed
+      :compatibility        (or force-subject-compatibility-level
+                               (sr/subject-compatibility src-registry src-subject))
       :global-compatibility (sr/subject-compatibility src-registry)
       :versions (->> (sr/versions src-registry src-subject)
                    (map (partial sr/schema-metadata src-registry src-subject))
@@ -127,10 +132,7 @@
      :destination
      {:schema-registry dst-registry
       :subject dst-subject
-      ;; if the `subject-compatibility-level` for the destination has been
-      ;; forced to a specific level, the use the given level
-      :compatibility        (or force-subject-compatibility-level
-                               (sr/subject-compatibility dst-registry dst-subject))
+      :compatibility        (sr/subject-compatibility dst-registry dst-subject)
       :global-compatibility (sr/subject-compatibility dst-registry)
       :versions (->> (sr/versions dst-registry dst-subject)
                    (map (partial sr/schema-metadata dst-registry dst-subject))
