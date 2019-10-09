@@ -8,38 +8,7 @@
 
   (in-ns 'viooh.mirror.schema-mirror)
 
-  (def diff
-    (compare-subjects
-     "http://registry.dataplatform.jcdecaux.com"
-     "prv_ProofOfPlay_V12-value"
-
-     "https://schema-registry.dev.develop.farm"
-     "prd.datariver.prv_ProofOfPlay_V12-value"))
-
-
-  (def diff
-    (compare-subjects
-     "http://registry.dataplatform.jcdecaux.com"
-     "prv_DigitalReservation_IT-value"
-
-     "https://schema-registry.dev.develop.farm"
-     "prd.datariver.prv_DigitalReservation-value"))
-
-  (def diff
-    (compare-subjects
-     "http://registry.dataplatform.jcdecaux.com"
-     "prv_DigitalReservation_UK-value"
-
-     "http://registry.dataplatform.jcdecaux.com"
-     "prv_DigitalReservation_SE-value"))
-
-  (analyse-compatibility diff)
-  (analyse-strict-schema-versions diff)
-  (analyse-schema-versions-lenient diff)
-  (analyse-schema-versions-lenient-unordered diff)
-
-
-  (def cfg
+  (def mirror-cfg
     {:name "prv_DigitalReservation_PT",
      :mirror-mode :lenient
      :subject-naming-strategy :topic-name,
@@ -61,8 +30,27 @@
      :serdes [:string :avro]})
 
 
-  (analyse-subjetcs cfg)
-  (mirror-schemas cfg)
+
+  (def diff
+    (compare-subjects
+     {:subject-naming-strategy :topic-name,
+      :source
+      {:topic {:topic-name "prv_DigitalReservation_UK"},
+       :schema-registry-url "http://registry.dataplatform.jcdecaux.com"},
+      :destination
+      {:topic {:topic-name "prd.datariver.prv_DigitalReservation4"},
+       :schema-registry-url "https://schema-registry.dev.develop.farm"},
+      }))
+
+
+  (analyse-compatibility diff)
+  (analyse-strict-schema-versions diff)
+  (analyse-schema-versions-lenient diff)
+  (analyse-schema-versions-lenient-unordered diff)
+
+
+  (analyse-subjetcs mirror-cfg)
+  (mirror-schemas mirror-cfg)
 
 
   )

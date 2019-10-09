@@ -110,23 +110,27 @@
 (defn compare-subjects
   "It compares the two subjects and returns information about the compatibility,
   the versions and the schemas"
-  [src-registry src-subject dst-registry dst-subject]
-  {:source
-   {:schema-registry src-registry
-    :subject src-subject
-    :compatibility        (sr/subject-compatibility src-registry src-subject)
-    :global-compatibility (sr/subject-compatibility src-registry)
-    :versions (->> (sr/versions src-registry src-subject)
-                 (map (partial sr/schema-metadata src-registry src-subject))
-                 (map #(update % :schema sr/parse-schema)))}
-   :destination
-   {:schema-registry dst-registry
-    :subject dst-subject
-    :compatibility        (sr/subject-compatibility dst-registry dst-subject)
-    :global-compatibility (sr/subject-compatibility dst-registry)
-    :versions (->> (sr/versions dst-registry dst-subject)
-                 (map (partial sr/schema-metadata dst-registry dst-subject))
-                 (map #(update % :schema sr/parse-schema)))}})
+  [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
+    {dst-registry :schema-registry-url {dst-topic :topic-name} :topic} :destination
+    :keys [mirror-mode subject-naming-strategy]}]
+  (let [src-subject (subject-name subject-naming-strategy src-topic :value)
+        dst-subject (subject-name subject-naming-strategy dst-topic :value)]
+    {:source
+     {:schema-registry src-registry
+      :subject src-subject
+      :compatibility        (sr/subject-compatibility src-registry src-subject)
+      :global-compatibility (sr/subject-compatibility src-registry)
+      :versions (->> (sr/versions src-registry src-subject)
+                   (map (partial sr/schema-metadata src-registry src-subject))
+                   (map #(update % :schema sr/parse-schema)))}
+     :destination
+     {:schema-registry dst-registry
+      :subject dst-subject
+      :compatibility        (sr/subject-compatibility dst-registry dst-subject)
+      :global-compatibility (sr/subject-compatibility dst-registry)
+      :versions (->> (sr/versions dst-registry dst-subject)
+                   (map (partial sr/schema-metadata dst-registry dst-subject))
+                   (map #(update % :schema sr/parse-schema)))}}))
 
 
 
@@ -397,19 +401,14 @@
 
 (defn analyse-subjetcs
   "Returns a list of repair actions which are required. The analysis and
-  repair must be repeated until the analysis comes back clear (no
-  repair actions required). This is due to the fact that some analysis
-  are only executed if the previous problem has been fixed.
+   repair must be repeated until the analysis comes back clear (no
+   repair actions required). This is due to the fact that some analysis
+   are only executed if the previous problem has been fixed.
   "
-  [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
-    {dst-registry :schema-registry-url {dst-topic :topic-name} :topic} :destination
-    :keys [mirror-mode subject-naming-strategy]}]
+  [{:keys [mirror-mode] :as mirror-cfg}]
 
   ;; TODO: should we handle avro schemas for keys as well?
-  (let [src-subject   (subject-name subject-naming-strategy src-topic :value)
-        dst-subject   (subject-name subject-naming-strategy dst-topic :value)
-        diff          (compare-subjects src-registry src-subject
-                                        dst-registry dst-subject)
+  (let [diff          (compare-subjects mirror-cfg)
         compatibility (analyse-compatibility diff)]
 
     (or
@@ -487,28 +486,11 @@
 
 (comment
 
-  ;; create comparison structure
-  (def diff
-    (compare-subjects
-     "http://source.registry.com/"
-     "source-topic"
-
-     "http://destination.registry.com/"
-     "destination-topic"))
-
-
-  ;; compare subjects on several criteria
-  (analyse-compatibility diff)
-  (analyse-strict-schema-versions diff)
-  (analyse-schema-versions-lenient diff)
-  (analyse-schema-versions-lenient-unordered diff)
-
-
 
   ;;
   ;; single mirror configuration
   ;;
-  (def cfg
+  (def mirror-cfg
     {:name "my-mirror",
      :mirror-mode :strict
      :subject-naming-strategy :topic-name,
@@ -528,16 +510,30 @@
       :schema-registry-url "http://destination.registry.com/"},
      :serdes [:string :avro]})
 
+
+  ;; create comparison structure
+  (def diff
+    (compare-subjects mirror-cfg))
+
+  ;; compare subjects on several criteria
+  (analyse-compatibility diff)
+  (analyse-strict-schema-versions diff)
+  (analyse-schema-versions-lenient diff)
+  (analyse-schema-versions-lenient-unordered diff)
+
+
+
+
   ;; analyse differences and propose required changes to the
   ;; destination subject in order to mirror the source this only
   ;; computes the repair actions, but doesn't perform any change
-  (analyse-subjetcs cfg)
+  (analyse-subjetcs mirror-cfg)
 
   ;;
   ;; `mirror-schema` will analyse the subjects and make any necessary
   ;; change to the destination subject to match the source subject.
   ;; THIS PERFORMS CHANGES THE DESTINATION SCHEMA REGISTRY
-  (mirror-schemas cfg)
+  (mirror-schemas mirror-cfg)
 
 
   )
