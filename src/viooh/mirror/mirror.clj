@@ -172,7 +172,7 @@
    ^KafkaConsumer c ^KafkaProducer p closed?]
   (let [is-new-schema? (yield-on-new-value)]
     (loop [records (k/poll c poll-interval)]
-      (log/infof "[%s] Got %s records" mirror-name (count records))
+      (log/debugf "[%s] Got %s records" mirror-name (count records))
       (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
 
       ;; send each record to destination kafka/topic

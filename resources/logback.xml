@@ -45,6 +45,8 @@
     </then>
   </if>
 
+  <logger name="viooh.mirror.mirror" level="DEBUG" />
+
   <root level="INFO">
     <appender-ref ref="STDOUT" />
     <if condition='isDefined("ES_LOGGER_URL")'>
