@@ -29,6 +29,10 @@
             <value>%level</value>
           </property>
           <property>
+            <name>thread</name>
+            <value>%thread</value>
+          </property>
+          <property>
             <name>host.name</name>
             <value>${HOSTNAME}</value>
           </property>
