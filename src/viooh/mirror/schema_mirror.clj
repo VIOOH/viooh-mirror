@@ -111,7 +111,8 @@
   "It compares the two subjects and returns information about the compatibility,
   the versions and the schemas"
   [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
-    {dst-registry :schema-registry-url {dst-topic :topic-name} :topic} :destination
+    {dst-registry :schema-registry-url {dst-topic :topic-name} :topic
+     force-subject-compatibility-level :force-subject-compatibility-level} :destination
     :keys [mirror-mode subject-naming-strategy]}]
   (let [src-subject (subject-name subject-naming-strategy src-topic :value)
         dst-subject (subject-name subject-naming-strategy dst-topic :value)]
@@ -126,7 +127,10 @@
      :destination
      {:schema-registry dst-registry
       :subject dst-subject
-      :compatibility        (sr/subject-compatibility dst-registry dst-subject)
+      ;; if the `subject-compatibility-level` for the destination has been
+      ;; forced to a specific level, the use the given level
+      :compatibility        (or force-subject-compatibility-level
+                               (sr/subject-compatibility dst-registry dst-subject))
       :global-compatibility (sr/subject-compatibility dst-registry)
       :versions (->> (sr/versions dst-registry dst-subject)
                    (map (partial sr/schema-metadata dst-registry dst-subject))

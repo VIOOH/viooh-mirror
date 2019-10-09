@@ -118,7 +118,10 @@ the schemas are automatically created in the destination cluster.
        ;; The source topic to mirror
        :source      {:topic {:topic-name "source-topic"}}
        ;; The name of the topic to mirror to.
-       :destination {:topic {:topic-name "mirror_test_copy_4"}}
+       :destination {:topic {:topic-name "mirror_test_copy_4"}
+                     ;; force the subject compatibility level
+                     ;; by default it will be mirrored from the source
+                     ;; :force-subject-compatibility-level "NONE" }
 
        ;; the SerDes to use for the key and the value respectively
        :serdes [:string :avro]}]
