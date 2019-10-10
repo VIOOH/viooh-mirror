@@ -18,7 +18,7 @@
                   :exclusions [org.flatland/ordered]]
                  [org.flatland/ordered "1.5.7"]   ;;Version pulled by compojure-api has a bug on jdk 11
 
-                 [com.brunobonacci/safely "0.5.0-alpha7"]
+                 [com.brunobonacci/safely "0.5.0-alpha8"]
                  [com.brunobonacci/oneconfig "0.10.2"
                   :exclusions [samsara/trackit-core]]
 

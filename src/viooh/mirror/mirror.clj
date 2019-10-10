@@ -5,6 +5,7 @@
             [viooh.mirror.schema-mirror :as sm]
             [clojure.walk :refer [stringify-keys]]
             [safely.core :refer [safely]]
+            [safely.thread-pool :refer [thread]]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [integrant.core :as ig]
@@ -224,7 +225,7 @@
         dest-topic (:topic-name dest-topic-cfg)
         src-serdes (s/serdes serdes src-schema-registry-url)
         dest-serdes (s/serdes serdes dest-schema-registry-url)]
-    (future
+    (thread {:name name}
       (log/infof "[%s] Starting mirror" name)
       (safely
        (when-not @closed?
