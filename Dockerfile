@@ -9,10 +9,6 @@ ARG glibc_version=2.29-r0
 
 ENV GLIBC_VERSION=$glibc_version
 
-##RUN  apk add --update \
-##     supervisor \
-##     && rm -rf /var/cache/apk/*
-
 # install compression support
 RUN apk --no-cache --force add libc6-compat zlib ca-certificates wget
 RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
