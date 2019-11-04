@@ -9,7 +9,9 @@
             [clojure.tools.reader.edn :as edn]
             [integrant.core :as ig]
             [samsara.trackit :as trackit]
-            [kafka-ssl-helper.core  :as ssl-helper]))
+            [kafka-ssl-helper.core  :as ssl-helper]
+            [com.brunobonacci.mulog :as u]
+            [com.brunobonacci.mulog.utils :as ut]))
 
 
 
@@ -166,7 +168,14 @@
     :jvm-metrics [:memory :gc :threads :attributes]
     ;; how often the stats will be displayed
     :reporting-frequency-seconds 60}
-   })
+
+   ;; event tracking system
+   :mulog
+   {;; events are logged to the console, choose an appropriate
+    ;; publisher for your deployment like `:elasticsearch` or `:kafka`
+    :type :console
+    }}
+  )
 
 
 
@@ -275,9 +284,15 @@
 
 (defn start-metrics!
   "Start the metrics reporter"
-  [{:keys [metrics] :as config}]
+  [{:keys [metrics mulog] :as config}]
   (when (:type metrics)
-    (trackit/start-reporting! metrics)))
+    (trackit/start-reporting! metrics))
+
+  (when (:type mulog)
+    (u/set-global-context!
+     {:app-name (config-key) :env (env)
+      :version (version) :puid (ut/puid)})
+    (u/start-publisher! mulog)))
 
 
 
@@ -285,10 +300,12 @@
   [& args]
   (print-vanity-title)
   (log/infof "Starting viooh-mirror v%s in env: '%s'" (version) (env))
-  (let [cfg (:value (configure {:key (config-key) :env (env) :version (version)}))
+  (let [config-entry (configure {:key (config-key) :env (env) :version (version)})
+        cfg (:value config-entry)
         cfg (apply-config-defaults cfg)]
 
     (start-metrics! cfg)
+    (u/log ::starting :config-change-num (:change-num config-entry))
     (ig/init {::http-server/server {}
               ::mirror/mirrors cfg})))
 

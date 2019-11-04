@@ -9,7 +9,8 @@
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [integrant.core :as ig]
-            [samsara.trackit :refer [track-rate]])
+            [samsara.trackit :refer [track-rate]]
+            [com.brunobonacci.mulog :as u])
   (:import [org.apache.kafka.clients.consumer KafkaConsumer]
            [org.apache.kafka.clients.producer KafkaProducer]
            [org.apache.kafka.clients.producer
@@ -54,7 +55,7 @@
   "It ensures that the given topic exists in the given kafka cluster.
   If not present it will create the topic and wait until the topic is
   ready."
-  [kafka-cfg {:keys [topic-name] :as topic}]
+  [kafka-cfg {:keys [topic-name partition-count replication-factor] :as topic}]
   {:pre [(:bootstrap.servers kafka-cfg) (:topic-name topic)
          (:partition-count topic) (:replication-factor topic)]}
 
@@ -65,7 +66,10 @@
      ;; create if not exists
      (when-not (describe-topic admin topic)
        (log/infof "Creating topic '%s' in destination cluster" topic-name)
-       (ka/create-topics! admin [topic]))
+       ;; create topic
+       (ka/create-topics! admin [topic])
+       (u/log ::topic-created :topic topic-name
+              :partition-count partition-count :replication-factor replication-factor))
 
      ;; wait for the topic to become ready
      (wait-for-topic-ready? admin topic :max-retries 10))
@@ -174,6 +178,7 @@
   (let [is-new-schema? (yield-on-new-value)]
     (loop [records (k/poll c poll-interval)]
       (log/debugf "[%s] Got %s records" mirror-name (count records))
+      (u/log ::messages-polled :num-records (count records))
       (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
 
       ;; send each record to destination kafka/topic
@@ -226,27 +231,32 @@
         src-serdes (s/serdes serdes src-schema-registry-url)
         dest-serdes (s/serdes serdes dest-schema-registry-url)]
     (thread {:name name}
-      (log/infof "[%s] Starting mirror" name)
-      (safely
-       (when-not @closed?
-         ;; TODO: mirror subjects even before start consuming
+      (u/with-context {:mirror-name name :src-schema-registry-url src-schema-registry-url
+                       :dest-schema-registry-url dest-schema-registry-url
+                       :src-topic src-topic :dest-topic dest-topic}
+        (log/infof "[%s] Starting mirror" name)
+        (u/log ::mirror-started)
+        (safely
+            (when-not @closed?
+              ;; TODO: mirror subjects even before start consuming
 
-         ;; ensuring that the destination topic exists
-         (when (get-in mirror-cfg [:topics-mirroring :auto-create-topics] true)
-           (mirror-kafka-topic-configuration! mirror-cfg))
+              ;; ensuring that the destination topic exists
+              (when (get-in mirror-cfg [:topics-mirroring :auto-create-topics] true)
+                (mirror-kafka-topic-configuration! mirror-cfg))
 
-         (with-open [^java.lang.AutoCloseable c (consumer consumer-group-id source src-serdes)
-                     ^java.lang.AutoCloseable p (producer destination dest-serdes)]
+              (with-open [^java.lang.AutoCloseable c (consumer consumer-group-id source src-serdes)
+                          ^java.lang.AutoCloseable p (producer destination dest-serdes)]
 
-           (k/subscribe c [src-topic-cfg])
-           (log/info "Subscribed to source using topic config:" src-topic-cfg)
-           (mirror mirror-cfg c p closed?)))
-       :on-error
-       :max-retries :forever
-       :track-as (format "vioohmirror.init.%s" name))
+                (k/subscribe c [src-topic-cfg])
+                (log/info "Subscribed to source using topic config:" src-topic-cfg)
+                (mirror mirror-cfg c p closed?)))
+          :on-error
+          :max-retries :forever
+          :track-as (format "vioohmirror.init.%s" name))
 
-      (log/infof "[%s] Stopping mirror" name)
-      (deliver p true))
+        (log/infof "[%s] Stopping mirror" name)
+        (u/log ::mirror-stopped)
+        (deliver p true)))
 
     (fn [] (reset! closed? true) p)))
 
