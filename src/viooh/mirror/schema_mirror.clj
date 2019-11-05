@@ -1,7 +1,8 @@
 (ns viooh.mirror.schema-mirror
   (:require [clojure.set :refer [difference]]
             [clojure.tools.logging :as log]
-            [viooh.mirror.schema-registry :as sr])
+            [viooh.mirror.schema-registry :as sr]
+            [com.brunobonacci.mulog :as u])
   (:import [io.confluent.kafka.serializers AvroSchemaUtils]))
 
 
@@ -373,7 +374,12 @@
             "on registry:" schema-registry
             "and subject:" subject
             "setting to level:" level)
-  (sr/update-subject-compatibility schema-registry subject level))
+  (u/trace ::repair
+    [:action :change-subject-compatibility
+     :schema-registry schema-registry
+     :subject subject
+     :level level]
+    (sr/update-subject-compatibility schema-registry subject level)))
 
 
 
@@ -383,7 +389,12 @@
             "on registry:" schema-registry
             "and subject:" subject
             "schema:" schema)
-  (sr/register-schema schema-registry subject schema))
+  (u/trace ::repair
+    [:action :register-schema
+     :schema-registry schema-registry
+     :subject subject
+     :schema (str schema)]
+    (sr/register-schema schema-registry subject schema)))
 
 
 
@@ -394,6 +405,8 @@
             "on registry:" dst-schema-registry
             "and subject:" dst-subject
             "reason:" message)
+  (u/log ::repair :action :raise-error :schema-registry dst-schema-registry
+         :subject dst-subject :reason message)
   (throw (ex-info message data)))
 
 
