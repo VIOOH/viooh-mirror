@@ -36,8 +36,8 @@
                  [ch.qos.logback/logback-classic "1.2.3"]
                  [org.codehaus.janino/janino "3.0.15"] ;; logback configuration conditionals :(
                  [com.internetitem/logback-elasticsearch-appender "1.6"]
-                 [com.brunobonacci/mulog "0.1.1"]
-                 [com.brunobonacci/mulog-elasticsearch "0.1.1"]]
+                 [com.brunobonacci/mulog "0.1.2"]
+                 [com.brunobonacci/mulog-elasticsearch "0.1.2"]]
 
   :main viooh.mirror.main
 
