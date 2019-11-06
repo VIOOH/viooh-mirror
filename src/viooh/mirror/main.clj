@@ -305,7 +305,7 @@
         cfg (apply-config-defaults cfg)]
 
     (start-metrics! cfg)
-    (u/log ::starting :config-change-num (:change-num config-entry))
+    (u/log ::app-started :config-change-num (:change-num config-entry))
     (ig/init {::http-server/server {}
               ::mirror/mirrors cfg})))
 
