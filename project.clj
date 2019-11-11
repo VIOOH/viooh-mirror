@@ -36,16 +36,20 @@
                  [ch.qos.logback/logback-classic "1.2.3"]
                  [org.codehaus.janino/janino "3.0.15"] ;; logback configuration conditionals :(
                  [com.internetitem/logback-elasticsearch-appender "1.6"]
-                 [com.brunobonacci/mulog "0.1.3"]
-                 [com.brunobonacci/mulog-elasticsearch "0.1.3"]]
+                 [com.brunobonacci/mulog "0.1.6"]
+                 [com.brunobonacci/mulog-elasticsearch "0.1.6"]]
 
   :main viooh.mirror.main
 
   :global-vars {*warn-on-reflection* true}
 
   :profiles {:uberjar {:aot :all}
-             :dev {:jvm-opts ["-D1config.default.backend=fs"]
+             :dev {;;:java-cmd "proxychains4 -f /usr/local/etc/proxychains.conf /tmp/java8/bin/java"
+                   :jvm-opts ["-D1config.default.backend=fs"]
                    :dependencies [[midje "1.9.9"]
                                   [org.clojure/test.check "0.10.0"]
                                   [criterium "0.4.5"]]
                    :plugins      [[lein-midje "3.2.1"]]}})
+
+
+;; scp -r -oProxyCommand="ssh -W %h:%p bastiondev_windy" ~/work/projects/viooh/projects/viooh-mirror ubuntu@172.18.242.17:.
