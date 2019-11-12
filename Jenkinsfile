@@ -52,4 +52,15 @@ node{
         }
    }
 
+    // DEV Rolling Update
+    stage("Rolling Update") {
+        if(env.BRANCH_NAME == 'master'){
+        sh """
+          wget https://github.com/BrunoBonacci/rolling-update/releases/download/0.3.1/rolling-update -O /tmp/rolling-update
+          chmod +x /tmp/rolling-update
+          /tmp/rolling-update viooh-mirror-dev*
+          """
+        }
+   }
+
 }
