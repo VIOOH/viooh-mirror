@@ -32,6 +32,8 @@
                            (seq (:isr part-info))))
                       partition-info))))
    :on-error
+   :circuit-breaker :kafka-admin-request
+   :timeout 60000
    :max-retries max-retries
    :retry-delay [:random 3000 :+/- 0.30]
    :failed? #(not %)
@@ -45,6 +47,8 @@
   (safely
    (-> (ka/describe-topics admin-client [topic]) vals first)
    :on-error
+   :circuit-breaker :kafka-admin-request
+   :timeout 60000
    :default nil
    :log-stacktrace false
    :message (str "reading status of topic:" topic-name)))
