@@ -1,4 +1,4 @@
-FROM openjdk:13-jdk-alpine
+FROM openjdk:12-jdk-alpine
 
 MAINTAINER Data Engineers <data.engineers@viooh.com>
 
