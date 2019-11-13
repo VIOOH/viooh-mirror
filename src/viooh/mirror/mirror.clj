@@ -106,16 +106,20 @@
 
 (defn mirror-kafka-topic-configuration!
   [{:keys [source destination topics-mirroring] :as mirror-cfg}]
-  (let [src-info (with-open [^java.lang.AutoCloseable admin (ka/->AdminClient (stringify-keys (:kafka source)))]
+  (let [src-info (with-open [^java.lang.AutoCloseable admin
+                             (ka/->AdminClient (stringify-keys (:kafka source)))]
                    (describe-topic admin (:topic source)))
         partitions (-> src-info :partition-info count)
         replicas   (-> src-info :partition-info first :replicas count)]
     (when-not src-info
       (throw (ex-info "Source topic doesn't exists" (:topic source))))
 
-    (let [partitions (config-value-mirror (:partition-count topics-mirroring) (or partitions 0))
-          replicas   (config-value-mirror (:replication-factor topics-mirroring) (or replicas 0))
-          dest-topic (merge {:partition-count partitions :replication-factor replicas} (:topic destination))]
+    (let [partitions (config-value-mirror
+                      (:partition-count topics-mirroring) (or partitions 0))
+          replicas   (config-value-mirror
+                      (:replication-factor topics-mirroring) (or replicas 0))
+          dest-topic (merge {:partition-count partitions
+                             :replication-factor replicas} (:topic destination))]
 
       ;; ensure topic exists in destination cluster
       (ensure-topic! (:kafka destination) dest-topic))))
