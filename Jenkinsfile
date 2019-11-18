@@ -1,10 +1,11 @@
 properties([
     [$class: 'BuildDiscarderProperty', strategy: [
-        $class: 'LogRotator', numToKeepStr: '10', artifactNumToKeepStr: '10']],
+        $class: 'LogRotator', numToKeepStr: '30', artifactNumToKeepStr: '30']],
     disableConcurrentBuilds(),
 ])
 
-
+def projectName = "viooh-mirror"
+def account = "517256697506"
 
 node{
     stage ('Build') {
@@ -16,7 +17,7 @@ node{
 
     stage("Cleanup images") {
         sh """
-          sudo docker images | grep viooh-mirror | awk '{print \$3}' | xargs -I{} sudo docker rmi -f {}
+          sudo docker images | grep ${projectName} | awk '{print \$3}' | xargs -I{} sudo docker rmi -f {}
           """
    }
 
@@ -25,13 +26,13 @@ node{
     stage("Package master") {
         if(env.BRANCH_NAME == 'master'){
         sh """
-          sudo docker build . -t viooh-mirror:${env.BUILD_NUMBER}
-          sudo docker tag viooh-mirror:${env.BUILD_NUMBER} 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:${env.BUILD_NUMBER}
-          sudo docker tag viooh-mirror:${env.BUILD_NUMBER} 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:master
-          DOCKER_LOGIN="sudo \$(aws ecr get-login --no-include-email --region=eu-west-1 --registry-ids 517256697506)"
+          sudo docker build . -t ${projectName}:${env.BUILD_NUMBER}
+          sudo docker tag ${projectName}:${env.BUILD_NUMBER} ${account}.dkr.ecr.eu-west-1.amazonaws.com/apps/${projectName}:${env.BUILD_NUMBER}
+          sudo docker tag ${projectName}:${env.BUILD_NUMBER} ${account}.dkr.ecr.eu-west-1.amazonaws.com/apps/${projectName}:master
+          DOCKER_LOGIN="sudo \$(aws ecr get-login --no-include-email --region=eu-west-1 --registry-ids ${account})"
           eval "\$DOCKER_LOGIN"
-          sudo docker push 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:master
-          sudo docker push 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:${env.BUILD_NUMBER}
+          sudo docker push ${account}.dkr.ecr.eu-west-1.amazonaws.com/apps/${projectName}:master
+          sudo docker push ${account}.dkr.ecr.eu-west-1.amazonaws.com/apps/${projectName}:${env.BUILD_NUMBER}
           """
         }
    }
@@ -42,13 +43,13 @@ node{
         // BUILD_NUMBER resets when building tags. DO NOT USE
         if(env.TAG_NAME != null){
         sh """
-          sudo docker build . -t viooh-mirror:${env.TAG_NAME}
-          sudo docker tag viooh-mirror:${env.TAG_NAME} 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:${env.TAG_NAME}
-          sudo docker tag viooh-mirror:${env.TAG_NAME} 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:stable
-          DOCKER_LOGIN="sudo \$(aws ecr get-login --no-include-email --region=eu-west-1 --registry-ids 517256697506)"
+          sudo docker build . -t ${projectName}:${env.TAG_NAME}
+          sudo docker tag ${projectName}:${env.TAG_NAME} ${account}.dkr.ecr.eu-west-1.amazonaws.com/apps/${projectName}:${env.TAG_NAME}
+          sudo docker tag ${projectName}:${env.TAG_NAME} ${account}.dkr.ecr.eu-west-1.amazonaws.com/apps/${projectName}:stable
+          DOCKER_LOGIN="sudo \$(aws ecr get-login --no-include-email --region=eu-west-1 --registry-ids ${account})"
           eval "\$DOCKER_LOGIN"
-          sudo docker push 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:${env.TAG_NAME}
-          sudo docker push 517256697506.dkr.ecr.eu-west-1.amazonaws.com/apps/viooh-mirror:stable
+          sudo docker push ${account}.dkr.ecr.eu-west-1.amazonaws.com/apps/${projectName}:${env.TAG_NAME}
+          sudo docker push ${account}.dkr.ecr.eu-west-1.amazonaws.com/apps/${projectName}:stable
           """
         }
    }
@@ -59,9 +60,8 @@ node{
         sh """
           wget https://github.com/BrunoBonacci/rolling-update/releases/download/0.3.1/rolling-update -O /tmp/rolling-update
           chmod +x /tmp/rolling-update
-          /tmp/rolling-update viooh-mirror-dev*
+          /tmp/rolling-update ${projectName}-dev*
           """
         }
    }
-
 }

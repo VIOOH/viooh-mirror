@@ -274,7 +274,7 @@
   (let [mirrors  (->> groups (mapcat :mirrors) (filter :enabled))
         stop-fns (->> mirrors (map start-mirror) doall)]
     (log/info "Started all mirrors")
-    (u/log ::mirror-initiated :mirrors (count mirrors))
+    (u/log ::mirrors-initiated :mirrors (count mirrors))
     stop-fns))
 
 
