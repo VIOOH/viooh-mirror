@@ -271,8 +271,10 @@
 
 
 (defmethod ig/init-key ::mirrors [_ {:keys [groups] :as cfg}]
-  (let [stop-fns (->> groups (mapcat :mirrors) (filter :enabled) (map start-mirror) doall)]
+  (let [mirrors  (->> groups (mapcat :mirrors) (filter :enabled))
+        stop-fns (->> mirrors (map start-mirror) doall)]
     (log/info "Started all mirrors")
+    (u/log ::mirror-initiated :mirrors (count mirrors))
     stop-fns))
 
 
