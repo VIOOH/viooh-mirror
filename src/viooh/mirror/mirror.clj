@@ -270,9 +270,19 @@
 
 
 
+(defn- identity-delay
+  "It sleeps for a bounded random amount of time and return the argument.
+  It is used to spread the mirror starts uniformly and avoid polling
+  storms. "
+  [x]
+  (safely.core/sleep 5000 :+/- 0.5)
+  x)
+
+
+
 (defmethod ig/init-key ::mirrors [_ {:keys [groups] :as cfg}]
   (let [mirrors  (->> groups (mapcat :mirrors) (filter :enabled))
-        stop-fns (->> mirrors (map start-mirror) doall)]
+        stop-fns (->> mirrors (map identity-delay) (map start-mirror) doall)]
     (log/info "Started all mirrors")
     (u/log ::mirrors-initiated :mirrors (count mirrors))
     stop-fns))
