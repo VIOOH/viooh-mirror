@@ -208,7 +208,7 @@
 (defn with-ssl-options
   "Takes a consumer/producer config and wraps ssl options (keystores, etc...)"
   [{:keys [private-key ca-cert-pem cert-pem] :as config}]
-  (if (and private-key ca-cert-pem cert-pem)
+  (if (and private-key cert-pem)
     (merge (dissoc config :private-key :cert-pem :ca-cert-pem)
            (ssl-helper/ssl-opts config))
     config))
