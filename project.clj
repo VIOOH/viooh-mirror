@@ -26,7 +26,7 @@
                  [io.confluent/kafka-schema-registry-client "5.1.2"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
 
-                 [viooh/kafka-ssl-helper "0.1.0"]
+                 [viooh/kafka-ssl-helper "0.3.0"]
 
                  ;;logging madness
                  [org.clojure/tools.logging "0.5.0"]
