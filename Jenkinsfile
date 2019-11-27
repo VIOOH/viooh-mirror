@@ -10,7 +10,7 @@ def account = "517256697506"
 node{
     stage ('Build') {
         checkout scm
-        withCredentials([usernamePassword(credentialsId: 'Artifactory', usernameVariable: 'ARTIFACTORY_USR', passwordVariable: 'ARTIFACTORY_PSW')]) {
+        withCredentials([usernamePassword(credentialsId: '4d0f0e2f-e42e-4332-9582-e3a204698a0e', usernameVariable: 'GH_PACKAGES_USR', passwordVariable: 'GH_PACKAGES_PSW')]) { {
           sh "lein do clean, check, midje, uberjar"
         }
     }

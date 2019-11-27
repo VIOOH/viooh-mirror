@@ -3,9 +3,9 @@
   :url "https://github.com/VIOOH/viooh-mirror"
 
   :repositories [["confluent" {:url "https://packages.confluent.io/maven/"}]
-                 ["releases" {:url "https://viooh.jfrog.io/viooh/list/libs-release-local/"
-                              :username :env/ARTIFACTORY_USR
-                              :password :env/ARTIFACTORY_PSW}]]
+                 ["github"    {:url "https://maven.pkg.github.com/VIOOH"
+                              :username :env/GH_PACKAGES_USR
+                              :password :env/GH_PACKAGES_PSW}]]
 
   :dependencies [[org.clojure/clojure "1.10.1"]
 
