@@ -26,7 +26,7 @@
                  [io.confluent/kafka-schema-registry-client "5.1.2"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
 
-                 [kafka-ssl-helper.com.viooh/kafka-ssl-helper "0.4.1"]
+                 [kafka-ssl-helper.com.viooh/kafka-ssl-helper "0.4.2"]
 
                  ;;logging madness
                  [org.clojure/tools.logging "0.5.0"]
@@ -50,6 +50,3 @@
                                   [org.clojure/test.check "0.10.0"]
                                   [criterium "0.4.5"]]
                    :plugins      [[lein-midje "3.2.1"]]}})
-
-
-;; scp -r -oProxyCommand="ssh -W %h:%p bastiondev_windy" ~/work/projects/viooh/projects/viooh-mirror ubuntu@172.18.242.17:.
