@@ -3,7 +3,7 @@
   :url "https://github.com/VIOOH/viooh-mirror"
 
   :repositories [["confluent" {:url "https://packages.confluent.io/maven/"}]
-                 ["github"    {:url "https://maven.pkg.github.com/VIOOH"
+                 ["github"    {:url "https://maven.pkg.github.com/VIOOH/kafka-ssl-helper"
                               :username :env/GH_PACKAGES_USR
                               :password :env/GH_PACKAGES_PSW}]]
 
@@ -26,7 +26,7 @@
                  [io.confluent/kafka-schema-registry-client "5.1.2"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
 
-                 [kafka-ssl-helper.com.viooh/kafka-ssl-helper "0.4.2"]
+                 [com.viooh/kafka-ssl-helper "0.4.2"]
 
                  ;;logging madness
                  [org.clojure/tools.logging "0.5.0"]
