@@ -9,7 +9,6 @@
             [clojure.tools.reader.edn :as edn]
             [integrant.core :as ig]
             [samsara.trackit :as trackit]
-            [kafka-ssl-helper.core  :as ssl-helper]
             [com.brunobonacci.mulog :as u]
             [com.brunobonacci.mulog.utils :as ut]))
 
@@ -205,16 +204,6 @@
 
 
 
-(defn with-ssl-options
-  "Takes a consumer/producer config and wraps ssl options (keystores, etc...)"
-  [{:keys [private-key ca-cert-pem cert-pem] :as config}]
-  (if (and private-key cert-pem)
-    (merge (dissoc config :private-key :cert-pem :ca-cert-pem)
-           (ssl-helper/ssl-opts config))
-    config))
-
-
-
 (defn- apply-single-mirror-default
   "given the configuration of a single mirror, and the configuration of a group
   it merges the two configurations and applies the defautls"
@@ -241,11 +230,7 @@
     (update $ :consumer-group-id (fn [cgid]
                                    (or cgid
                                       (format "%s.viooh-mirror.%s"
-                                              (env) (:name $)))))
-
-    ;; add SSL configuration to kafka source and destination if necessary
-    (update-in $ [:source :kafka] with-ssl-options)
-    (update-in $ [:destination :kafka] with-ssl-options)))
+                                              (env) (:name $)))))))
 
 
 
