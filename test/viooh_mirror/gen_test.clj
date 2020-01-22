@@ -9,14 +9,6 @@
 ;; Property based testing. Custom generators for subjects diffs
 ;;
 
-(def num-tests
-  (or
-   (println "TC_NUM_TESTS=" (or (System/getenv "TC_NUM_TESTS") 100))
-   (Integer/getInteger "test-check.num-tests")
-   (some-> (System/getenv "TC_NUM_TESTS") Integer/parseInt)
-   100))
-
-
 
 (def compatibility-levels-gen
   (gen/elements ["NONE" "FORWARD" "BACKWARD" "FULL"
