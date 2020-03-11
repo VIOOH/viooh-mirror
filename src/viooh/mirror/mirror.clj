@@ -231,7 +231,9 @@
   (let [closed? (atom false)
         p (promise)
         src-schema-registry-url (:schema-registry-url source)
+        src-schema-registry-configs (:schema-registry-configs source)
         dest-schema-registry-url (:schema-registry-url destination)
+        dest-schema-registry-configs (:schema-registry-configs destination)
         src-topic-cfg (:topic source)
         src-topic (:topic-name src-topic-cfg)
         dest-topic-cfg (:topic destination)
@@ -244,7 +246,9 @@
       (safely.core/sleep 5000 :+/- 0.5)
 
       (u/with-context {:mirror-name name :src-schema-registry-url src-schema-registry-url
+                       :src-schema-registry-configs src-schema-registry-configs
                        :dest-schema-registry-url dest-schema-registry-url
+                       :dest-schema-registry-configs dest-schema-registry-configs
                        :src-topic src-topic :dest-topic dest-topic}
         (log/infof "[%s] Starting mirror" name)
         (u/log ::mirror-started)

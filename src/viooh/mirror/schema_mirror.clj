@@ -111,11 +111,13 @@
 (defn compare-subjects
   "It compares the two subjects and returns information about the compatibility,
   the versions and the schemas"
-  [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
-    {dst-registry :schema-registry-url {dst-topic :topic-name} :topic
+  [{{src-registry :schema-registry-url src-registry-cfgs :schema-registry-configs {src-topic :topic-name} :topic} :source
+    {dst-registry :schema-registry-url dst-registry-cfgs :schema-registry-configs {dst-topic :topic-name} :topic
      force-subject-compatibility-level :force-subject-compatibility-level} :destination
     :keys [mirror-mode subject-naming-strategy]}]
-  (let [src-subject (subject-name subject-naming-strategy src-topic :value)
+  (let [src-registry-client (sr/schema-registry src-registry dst-registry-cfgs)
+        dst-registry-client (sr/schema-registry dst-registry dst-registry-cfgs)
+        src-subject (subject-name subject-naming-strategy src-topic :value)
         dst-subject (subject-name subject-naming-strategy dst-topic :value)]
     {:source
      {:schema-registry src-registry
@@ -418,7 +420,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-(defn analyse-subjetcs
+(defn analyse-subjects
   "Returns a list of repair actions which are required. The analysis and
    repair must be repeated until the analysis comes back clear (no
    repair actions required). This is due to the fact that some analysis
@@ -473,26 +475,30 @@
 ;; the schemas and repair them.
 ;; -------------------------------------------------------------------
 (defn mirror-schemas
-  [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
-    {dst-registry :schema-registry-url {dst-topic :topic-name} :topic} :destination
+  [{{src-registry :schema-registry-url src-registry-cfgs :schema-registry-configs
+     {src-topic :topic-name} :topic} :source
+    {dst-registry :schema-registry-url dst-registry-cfgs :schema-registry-configs
+     {dst-topic :topic-name} :topic} :destination
     :keys [mirror-mode subject-naming-strategy] :as mirror}]
 
-  (loop [current-repairs  (analyse-subjetcs mirror)
-         previous-repairs #{}]
+  (let [src-registry-client (sr/schema-registry src-registry dst-registry-cfgs)
+        dst-registry-client (sr/schema-registry dst-registry dst-registry-cfgs)]
+    (loop [current-repairs  (analyse-subjects mirror)
+           previous-repairs #{}]
 
-    (when (seq current-repairs)
+      (when (seq current-repairs)
 
-      (let [failed-repairs (filter previous-repairs current-repairs)]
-        (when (seq failed-repairs)
-          (throw (ex-info "Failed to repair subject"
-                          {:mirror mirror
-                           :failed-repairs failed-repairs}))))
+        (let [failed-repairs (filter previous-repairs current-repairs)]
+          (when (seq failed-repairs)
+            (throw (ex-info "Failed to repair subject"
+                            {:mirror mirror
+                             :failed-repairs failed-repairs}))))
 
-      ;; attempting repairs
-      (run! perform-repair current-repairs)
+        ;; attempting repairs
+        (run! perform-repair current-repairs)
 
-      ;; next round
-      (recur (analyse-subjetcs mirror) (into previous-repairs current-repairs)))))
+        ;; next round
+        (recur (analyse-subjects mirror) (into previous-repairs current-repairs))))))
 
 
 

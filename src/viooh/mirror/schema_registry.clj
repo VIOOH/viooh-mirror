@@ -3,7 +3,7 @@
             [safely.core :refer [safely]])
   (:import
    [io.confluent.kafka.schemaregistry.client.rest.exceptions RestClientException]
-   [io.confluent.kafka.schemaregistry.client CachedSchemaRegistryClient]
+   [io.confluent.kafka.schemaregistry.client SchemaRegistryClient CachedSchemaRegistryClient]
    [org.apache.avro Schema]))
 
 
@@ -33,16 +33,20 @@
 
 
 
-(def ^{:arglists '([url] [url capacity])
+(def ^{:arglists '([url] [url configs] [url configs capacity])
        :doc "It creates a CachedSchemaRegistry client and it caches the instance."
        :tag CachedSchemaRegistryClient}
   schema-registry
   (memoize
    (fn schema-registry-direct
      ([^String url]
-      (schema-registry-direct url 256))
-     ([^String url ^long capacity]
-      (CachedSchemaRegistryClient. url capacity)))))
+      (schema-registry-direct url {}))
+     ([^String url ^java.util.Map configs]
+      (schema-registry-direct url 256 configs))
+     ([^String url ^long capacity ^java.util.Map configs]
+      {:client (CachedSchemaRegistryClient. url capacity
+                                            (or configs {}))
+       :url    url}))))
 
 
 
@@ -62,7 +66,7 @@
 (def ^:private endpoint-key
   (memoize
    (fn
-     [^String url]
+     [{:keys [url] :as client}]
      (when url
        (-> url
           (str/replace-first #"^https?://" "")
@@ -89,29 +93,29 @@
 
 (defn subjects
   "Returns all the subjects registered int he schema registry"
-  [^String url]
+  [{:keys [url client]}]
   (with-circuit-breaker url
-    (.. (schema-registry url)
+    (.. ^SchemaRegistryClient client
         (getAllSubjects))))
 
 
 
 (defn versions
   "Returns all the versions of a given subject"
-  [^String url ^String subject]
+  [{:keys [url client]} ^String subject]
   (with-circuit-breaker url
     (return-nil-when-not-found
-     (.. (schema-registry url)
+     (.. ^SchemaRegistryClient client
          (getAllVersions subject)))))
 
 
 
 (defn schema-version
   "Given a subject and a schema it returns the version of the schema"
-  [^String url ^String subject ^Schema schema]
+  [{:keys [url client]} ^String subject ^Schema schema]
   (with-circuit-breaker url
     (return-nil-when-not-found
-     (.. (schema-registry url)
+     (.. ^SchemaRegistryClient client
          (getVersion subject schema)))))
 
 
@@ -119,32 +123,32 @@
 (defn schema-metadata
   "Returns the schema metadata for the given subject and version.
   If the version is not provided then it returns the latest version"
-  ([^String url ^String subject]
+  ([{:keys [url client]} ^String subject]
    (with-circuit-breaker url
      (return-nil-when-not-found
       (->clj
-       (.. (schema-registry url)
+       (.. ^SchemaRegistryClient client
            (getLatestSchemaMetadata subject))))))
-  ([^String url ^String subject ^long version]
+  ([{:keys [url client]} ^String subject ^long version]
    (with-circuit-breaker url
      (return-nil-when-not-found
       (->clj
-       (.. (schema-registry url)
+       (.. ^SchemaRegistryClient client
            (getSchemaMetadata subject version)))))))
 
 
 
 (defn retrieve-schema
   "Given a schema id, and optionally a subject, it returns the Avro schema"
-  ([^String url ^long id]
+  ([{:keys [url client]} ^long id]
    (with-circuit-breaker url
      (return-nil-when-not-found
-      (.. (schema-registry url)
+      (.. ^SchemaRegistryClient client
           (getById id)))))
-  ([^String url ^long id ^String subject]
+  ([{:keys [url client]} ^long id ^String subject]
    (with-circuit-breaker url
      (return-nil-when-not-found
-      (.. (schema-registry url)
+      (.. ^SchemaRegistryClient client
           (getBySubjectAndId subject id))))))
 
 
@@ -152,12 +156,12 @@
 (defn subject-compatibility
   "Given a subject it returns the subject compatibility level or nil if not found.
    Without a subject it returns the default compatibility level"
-  ([^String url]
+  ([{:keys [url client]}]
    (subject-compatibility url nil))
-  ([^String url ^String subject]
+  ([{:keys [url client]} ^String subject]
    (with-circuit-breaker url
      (return-nil-when-not-found
-      (.. (schema-registry url)
+      (.. ^SchemaRegistryClient client
           (getCompatibility subject))))))
 
 
@@ -165,21 +169,21 @@
 (defn update-subject-compatibility
   "Given a subject it updates the subject compatibility level to the given value
    Without a subject it updates the default compatibility level"
-  ([^String url ^String level]
+  ([{:keys [url client]} ^String level]
    (update-subject-compatibility url nil level))
-  ([^String url ^String subject ^String level]
+  ([{:keys [url client]} ^String subject ^String level]
    (with-circuit-breaker url
      (return-nil-when-not-found
-      (.. (schema-registry url)
+      (.. ^SchemaRegistryClient client
           (updateCompatibility subject level))))))
 
 
 
 (defn register-schema
   "Given a subject and a schema it register the schema if new and returns the id"
-  [^String url ^String subject ^Schema schema]
+  [{:keys [url client]} ^String subject ^Schema schema]
   (with-circuit-breaker url
-    (.. (schema-registry url)
+    (.. ^SchemaRegistryClient client
         (register subject schema))))
 
 
@@ -187,10 +191,10 @@
 (defn delete-subject
   "Given a subject it removes it if found and returns the list of
   deleted versions"
-  [^String url ^String subject]
+  [{:keys [url client]} ^String subject]
   (with-circuit-breaker url
     (return-nil-when-not-found
-     (.. (schema-registry url)
+     (.. ^SchemaRegistryClient client
          (deleteSubject subject)))))
 
 
@@ -198,10 +202,10 @@
 (defn delete-version
   "Given a subject and a schema version it removes it if found and
   returns the list of deleted versions"
-  [^String url ^String subject ^long version]
+  [{:keys [url client]} ^String subject ^long version]
   (with-circuit-breaker url
     (return-nil-when-not-found
-     (.. (schema-registry url)
+     (.. ^SchemaRegistryClient client
          (deleteSchemaVersion subject (str version))))))
 
 
