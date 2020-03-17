@@ -25,14 +25,13 @@
                  [io.confluent/kafka-schema-registry-client "5.4.1"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
 
-                 ;;logging madness
+                 ;;logging
                  [org.clojure/tools.logging "1.0.0"]
-                 [org.slf4j/log4j-over-slf4j "1.7.30"]
-                 [org.slf4j/jul-to-slf4j "1.7.30"]
-                 [org.slf4j/jcl-over-slf4j "1.7.30"]
                  [ch.qos.logback/logback-classic "1.2.3"]
                  [org.codehaus.janino/janino "3.1.1"] ;; logback configuration conditionals :(
                  [com.internetitem/logback-elasticsearch-appender "1.6"]
+
+                 ;; observability
                  [com.brunobonacci/mulog "0.1.8"]
                  [com.brunobonacci/mulog-elasticsearch "0.1.8"]
                  [com.brunobonacci/mulog-kafka "0.1.8"]]
