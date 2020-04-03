@@ -41,5 +41,5 @@
 
 (defn serdes
   [[key-serde value-serde] schema-registry key-subject-name-strategy value-subject-name-strategy]
-  {:key-serde (serde key-serde schema-registry)
-   :value-serde (serde value-serde schema-registry)})
+  {:key-serde (serde key-serde schema-registry key-subject-name-strategy value-subject-name-strategy)
+   :value-serde (serde value-serde schema-registry key-subject-name-strategy value-subject-name-strategy)})
