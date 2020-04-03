@@ -3,14 +3,12 @@
             [viooh.mirror.schema-registry :as r])
   (:import [io.confluent.kafka.serializers
             KafkaAvroDeserializer KafkaAvroSerializer]
-           [org.apache.kafka.common.serialization Serdes]
-           (java.util HashMap)))
+           [org.apache.kafka.common.serialization Serdes]))
 
 (defn avro-serde-config
   [key-subject-name-strategy value-subject-name-strategy]
-  (doto (HashMap.)
-    (.put "key.subject.name.strategy" key-subject-name-strategy)
-    (.put "value.subject.name.strategy" value-subject-name-strategy)))
+  {"key.subject.name.strategy" key-subject-name-strategy
+   "value.subject.name.strategy" value-subject-name-strategy})
 
 (defn- avro-serializer
   [url key-subject-name-strategy value-subject-name-strategy]
