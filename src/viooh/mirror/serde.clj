@@ -6,20 +6,23 @@
            [org.apache.kafka.common.serialization Serdes]))
 
 (defn avro-serde-config
-  [key-subject-name-strategy value-subject-name-strategy]
-  {"key.subject.name.strategy" key-subject-name-strategy
+  [url key-subject-name-strategy value-subject-name-strategy]
+  {"schema.registry.url" url
+   "key.subject.name.strategy" key-subject-name-strategy
    "value.subject.name.strategy" value-subject-name-strategy})
 
 (defn- avro-serializer
   [url key-subject-name-strategy value-subject-name-strategy]
   (KafkaAvroSerializer. (r/schema-registry url)
-                        (avro-serde-config key-subject-name-strategy
+                        (avro-serde-config url
+                                           key-subject-name-strategy
                                            value-subject-name-strategy)))
 
 (defn- avro-deserializer
   [url key-subject-name-strategy value-subject-name-strategy]
   (KafkaAvroDeserializer. (r/schema-registry url)
-                          (avro-serde-config key-subject-name-strategy
+                          (avro-serde-config url
+                                             key-subject-name-strategy
                                              value-subject-name-strategy)))
 
 
