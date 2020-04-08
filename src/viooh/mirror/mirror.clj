@@ -196,8 +196,9 @@
                  (when-not @closed?
                    ;; When a new schema is detected, the mirror-schema
                    ;; will repair all missing schemas.
-                   (when (is-new-schema? (sm/avro-schema value))
-                     (sm/mirror-schemas mirror-cfg))
+                   (let [src-schema (sm/avro-schema value)]
+                     (when (is-new-schema? src-schema)
+                       (sm/mirror-schemas mirror-cfg src-schema)))
 
                    ;; returns a java future
                    (k/send! p (->ProducerRecord dest-topic timestamp key value headers)))
