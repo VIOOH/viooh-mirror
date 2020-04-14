@@ -117,9 +117,9 @@
   [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
     {dst-registry :schema-registry-url {dst-topic :topic-name} :topic
      force-subject-compatibility-level :force-subject-compatibility-level} :destination
-    :keys [mirror-mode value-subject-naming-strategy]} schema]
-  (let [src-subject (subject-name value-subject-naming-strategy src-topic :value schema)
-        dst-subject (subject-name value-subject-naming-strategy dst-topic :value schema)]
+    :keys [mirror-mode value-subject-name-strategy]} schema]
+  (let [src-subject (subject-name value-subject-name-strategy src-topic :value schema)
+        dst-subject (subject-name value-subject-name-strategy dst-topic :value schema)]
     {:source
      {:schema-registry src-registry
       :subject src-subject
@@ -513,7 +513,7 @@
   (def mirror-cfg
     {:name "my-mirror",
      :mirror-mode :strict
-     :subject-naming-strategy :topic-name,
+     :value-subject-name-strategy "io.confluent.kafka.serializers.subject.TopicNameStrategy",
      :source
      {:kafka
       {:bootstrap.servers "broker1:9092",
@@ -533,7 +533,7 @@
 
   ;; create comparison structure
   (def diff
-    (compare-subjects mirror-cfg))
+    (compare-subjects mirror-cfg nil))
 
   ;; compare subjects on several criteria
   (analyse-compatibility diff)
@@ -547,7 +547,7 @@
   ;; analyse differences and propose required changes to the
   ;; destination subject in order to mirror the source this only
   ;; computes the repair actions, but doesn't perform any change
-  (analyse-subjetcs mirror-cfg)
+  (analyse-subjetcs mirror-cfg nil)
 
   ;;
   ;; `mirror-schema` will analyse the subjects and make any necessary
