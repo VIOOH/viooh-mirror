@@ -85,14 +85,14 @@
        (or (repeat s nil)))))
 
 (defn subject-name
-  [strategy topic key-or-val ^Schema schema-mirror]
+  [strategy topic key-or-val schema-name]
   {:pre [(#{"io.confluent.kafka.serializers.subject.TopicNameStrategy"
             "io.confluent.kafka.serializers.subject.RecordNameStrategy"} strategy) (#{:key :value} key-or-val)]}
   (case strategy
     "io.confluent.kafka.serializers.subject.TopicNameStrategy"
     (str topic "-" (name key-or-val))
     "io.confluent.kafka.serializers.subject.RecordNameStrategy"
-    (.getFullName schema-mirror)))
+    schema-name))
 
 
 
@@ -117,9 +117,9 @@
   [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
     {dst-registry :schema-registry-url {dst-topic :topic-name} :topic
      force-subject-compatibility-level :force-subject-compatibility-level} :destination
-    :keys [mirror-mode value-subject-name-strategy]} schema]
-  (let [src-subject (subject-name value-subject-name-strategy src-topic :value schema)
-        dst-subject (subject-name value-subject-name-strategy dst-topic :value schema)]
+    :keys [mirror-mode value-subject-name-strategy]} schema-name]
+  (let [src-subject (subject-name value-subject-name-strategy src-topic :value schema-name)
+        dst-subject (subject-name value-subject-name-strategy dst-topic :value schema-name)]
     {:source
      {:schema-registry src-registry
       :subject src-subject
@@ -427,10 +427,10 @@
    repair actions required). This is due to the fact that some analysis
    are only executed if the previous problem has been fixed.
   "
-  [{:keys [mirror-mode] :as mirror-cfg} schema]
+  [{:keys [mirror-mode] :as mirror-cfg} schema-name]
 
   ;; TODO: should we handle avro schemas for keys as well?
-  (let [diff          (compare-subjects mirror-cfg schema)
+  (let [diff          (compare-subjects mirror-cfg schema-name)
         compatibility (analyse-compatibility diff)]
 
     (or
@@ -476,9 +476,9 @@
 ;; the schemas and repair them.
 ;; -------------------------------------------------------------------
 (defn mirror-schemas
-  [mirror schema]
+  [mirror schema-name]
 
-  (loop [current-repairs  (analyse-subjetcs mirror schema)
+  (loop [current-repairs  (analyse-subjetcs mirror schema-name)
          previous-repairs #{}]
 
     (when (seq current-repairs)
@@ -493,7 +493,7 @@
       (run! perform-repair current-repairs)
 
       ;; next round
-      (recur (analyse-subjetcs mirror schema) (into previous-repairs current-repairs)))))
+      (recur (analyse-subjetcs mirror schema-name) (into previous-repairs current-repairs)))))
 
 
 

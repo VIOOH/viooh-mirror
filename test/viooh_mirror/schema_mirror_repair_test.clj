@@ -761,3 +761,92 @@
  => nil
 
  )
+
+
+(fact
+ " test mirror schema version repair for subject topic name strategy"
+
+ (against-background
+  (viooh.mirror.schema-registry/subject-compatibility "src-reg" "aaa-value") => "FORWARD_TRANSITIVE"
+  (viooh.mirror.schema-registry/subject-compatibility "src-reg") => "FORWARD_TRANSITIVE"
+  (viooh.mirror.schema-registry/subject-compatibility "dst-reg") => "FORWARD_TRANSITIVE"
+  (viooh.mirror.schema-registry/subject-compatibility "dst-reg" "bbb-value") => "FORWARD_TRANSITIVE"
+  (viooh.mirror.schema-registry/versions "dst-reg" "bbb-value") => [1 2]
+  (viooh.mirror.schema-registry/versions "src-reg" "aaa-value") => [1 2 3 4]
+  (viooh.mirror.schema-registry/schema-metadata "dst-reg" "bbb-value" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (viooh.mirror.schema-registry/schema-metadata "dst-reg" "bbb-value" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (viooh.mirror.schema-registry/schema-metadata "src-reg" "aaa-value" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (viooh.mirror.schema-registry/schema-metadata "src-reg" "aaa-value" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (viooh.mirror.schema-registry/schema-metadata "src-reg" "aaa-value" 3) => {:version 3 :id 3 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (viooh.mirror.schema-registry/schema-metadata "src-reg" "aaa-value" 4) => {:version 4 :id 4 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  )
+ (->
+  {:name "my-mirror-schema-cfg",
+   :mirror-mode :strict
+   :value-subject-name-strategy "io.confluent.kafka.serializers.subject.TopicNameStrategy",
+   :source
+   {:topic {:topic-name "aaa"},
+    :schema-registry-url "src-reg"},
+
+   :destination
+   {:topic {:topic-name "bbb"},
+    :schema-registry-url "dst-reg"},
+   :serdes [:string :avro]}
+  (compare-subjects nil)
+  analyse-strict-schema-versions)
+ => {:dst 2
+     :dst-schema-registry "dst-reg"
+     :dst-subject "bbb-value"
+     :matches? [true true false false]
+     :missing [(viooh.mirror.schema-registry/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")
+               (viooh.mirror.schema-registry/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")]
+
+     :src 4
+     :test false
+     :type :analyse-strict-schema-versions})
+
+
+(fact
+ " test mirror schema version repair for subject record name strategy"
+
+ (against-background
+  (viooh.mirror.schema-registry/subject-compatibility "src-reg" "aaa.bbb") => "FORWARD_TRANSITIVE"
+  (viooh.mirror.schema-registry/subject-compatibility "src-reg") => "FORWARD_TRANSITIVE"
+  (viooh.mirror.schema-registry/subject-compatibility "dst-reg") => "FORWARD_TRANSITIVE"
+  (viooh.mirror.schema-registry/subject-compatibility "dst-reg" "aaa.bbb") => "FORWARD_TRANSITIVE"
+  (viooh.mirror.schema-registry/versions "dst-reg" "aaa.bbb") => [1 2]
+  (viooh.mirror.schema-registry/versions "src-reg" "aaa.bbb") => [1 2 3 4]
+  (viooh.mirror.schema-registry/schema-metadata "dst-reg" "aaa.bbb" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (viooh.mirror.schema-registry/schema-metadata "dst-reg" "aaa.bbb" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (viooh.mirror.schema-registry/schema-metadata "src-reg" "aaa.bbb" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (viooh.mirror.schema-registry/schema-metadata "src-reg" "aaa.bbb" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (viooh.mirror.schema-registry/schema-metadata "src-reg" "aaa.bbb" 3) => {:version 3 :id 3 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (viooh.mirror.schema-registry/schema-metadata "src-reg" "aaa.bbb" 4) => {:version 4 :id 4 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  )
+ (->
+  {:name "my-mirror-schema-cfg",
+   :mirror-mode :strict
+   :value-subject-name-strategy "io.confluent.kafka.serializers.subject.RecordNameStrategy",
+   :source
+   {:topic {:topic-name "eee"},
+    :schema-registry-url "src-reg"},
+
+   :destination
+   {:topic {:topic-name "eee"},
+    :schema-registry-url "dst-reg"},
+   :serdes [:string :avro]}
+  (compare-subjects "aaa.bbb")
+  analyse-strict-schema-versions)
+ => {:dst 2
+     :dst-schema-registry "dst-reg"
+     :dst-subject "aaa.bbb"
+     :matches? [true true false false]
+     :missing [(viooh.mirror.schema-registry/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")
+               (viooh.mirror.schema-registry/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")]
+
+     :src 4
+     :test false
+     :type :analyse-strict-schema-versions})
+
+
+

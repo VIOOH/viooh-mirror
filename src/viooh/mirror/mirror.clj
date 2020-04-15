@@ -16,7 +16,8 @@
            [org.apache.kafka.clients.producer
             ProducerRecord RecordMetadata]
            [org.apache.kafka.clients.admin AdminClient]
-           [org.apache.kafka.common.header Headers]))
+           [org.apache.kafka.common.header Headers]
+           (org.apache.avro Schema)))
 
 
 
@@ -196,9 +197,10 @@
                  (when-not @closed?
                    ;; When a new schema is detected, the mirror-schema
                    ;; will repair all missing schemas.
-                   (let [src-schema (sm/avro-schema value)]
+                   (let [^Schema src-schema (sm/avro-schema value)
+                         schema-name (.getFullName src-schema)]
                      (when (is-new-schema? src-schema)
-                       (sm/mirror-schemas mirror-cfg src-schema)))
+                       (sm/mirror-schemas mirror-cfg schema-name)))
 
                    ;; returns a java future
                    (k/send! p (->ProducerRecord dest-topic timestamp key value headers)))
