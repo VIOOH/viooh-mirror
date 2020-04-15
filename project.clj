@@ -21,6 +21,8 @@
                   :exclusions [samsara/trackit-core com.fasterxml.jackson.core/jackson-databind]]
                  [com.fasterxml.jackson.core/jackson-databind "2.10.2"]
 
+                 [com.viooh/kafka-ssl-helper "0.5.0"]
+
                  [fundingcircle/jackdaw "0.7.1"]
                  [io.confluent/kafka-schema-registry-client "5.4.1"
                   :exclusions [com.fasterxml.jackson.core/jackson-databind]]
