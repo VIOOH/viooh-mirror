@@ -1,0 +1,58 @@
+{
+  "variables": {
+      "ami_prefix":  "{{env `TF_VAR_ami_prefix`}}",
+      "aws_profile": "{{env `AWS_PROFILE`}}",
+      "env":         "dev",
+      "bastion_username": null,
+      "bastion_host": null
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "profile": "{{user `aws_profile`}}",
+      "region": "eu-west-1",
+       "vpc_filter": {
+        "filters": {
+          "tag:environment": "{{user `env`}}"
+        }
+      },
+      "subnet_filter": {
+        "filters": {
+          "tag:Name": "dev-private-eu-west-1a"
+        },
+        "most_free": true,
+        "random": false
+      },
+
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "debian-stretch-hvm-x86_64-gp2-*",
+          "root-device-type": "ebs"
+        },
+        "owners": [
+          "379101102735"
+        ],
+        "most_recent": true
+      },
+      "instance_type": "t3.micro",
+      "encrypt_boot":  true,
+      "ssh_username": "admin",
+      "ssh_bastion_username": "{{user `bastion_username`}}",
+      "ssh_bastion_host": "{{user `bastion_host`}}",
+      "ssh_bastion_port": 22,
+      "ssh_bastion_agent_auth": true,
+      "ssh_timeout":"1m",
+      "ami_name": "{{user `ami_prefix`}}viooh-mirror-stretch-{{timestamp}}"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "execute_command": "chmod +x {{ .Path }}; sudo env {{ .Vars }} {{ .Path }}",
+        "scripts": [
+            "installer-base.sh"
+        ]
+    }
+  ]
+}
