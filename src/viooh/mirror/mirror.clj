@@ -16,7 +16,8 @@
            [org.apache.kafka.clients.producer
             ProducerRecord RecordMetadata]
            [org.apache.kafka.clients.admin AdminClient]
-           [org.apache.kafka.common.header Headers]))
+           [org.apache.kafka.common.header Headers]
+           [org.apache.avro Schema]))
 
 
 
@@ -196,8 +197,10 @@
                  (when-not @closed?
                    ;; When a new schema is detected, the mirror-schema
                    ;; will repair all missing schemas.
-                   (when (is-new-schema? (sm/avro-schema value))
-                     (sm/mirror-schemas mirror-cfg))
+                   (let [^Schema src-schema (sm/avro-schema value)
+                         schema-name (.getFullName src-schema)]
+                     (when (is-new-schema? src-schema)
+                       (sm/mirror-schemas mirror-cfg schema-name)))
 
                    ;; returns a java future
                    (k/send! p (->ProducerRecord dest-topic timestamp key value headers)))
@@ -227,7 +230,7 @@
   producer and consumer are setup with the avro serdes from the
   viooh.mirror.serde namespace which automatically create the schemas
   in the destination cluster."
-  [{:keys [consumer-group-id name source destination serdes] :as mirror-cfg}]
+  [{:keys [consumer-group-id name source destination serdes key-subject-name-strategy value-subject-name-strategy] :as mirror-cfg}]
   (let [closed? (atom false)
         p (promise)
         src-schema-registry-url (:schema-registry-url source)
@@ -236,8 +239,8 @@
         src-topic (:topic-name src-topic-cfg)
         dest-topic-cfg (:topic destination)
         dest-topic (:topic-name dest-topic-cfg)
-        src-serdes (s/serdes serdes src-schema-registry-url)
-        dest-serdes (s/serdes serdes dest-schema-registry-url)]
+        src-serdes (s/serdes serdes src-schema-registry-url key-subject-name-strategy value-subject-name-strategy)
+        dest-serdes (s/serdes serdes dest-schema-registry-url key-subject-name-strategy value-subject-name-strategy)]
     (thread {:name name}
       ;; It sleeps for a bounded random amount of time.  It is used to
       ;; spread the mirror starts uniformly and avoid polling storms.

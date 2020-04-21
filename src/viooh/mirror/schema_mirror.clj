@@ -3,7 +3,9 @@
             [clojure.tools.logging :as log]
             [viooh.mirror.schema-registry :as sr]
             [com.brunobonacci.mulog :as u])
-  (:import [io.confluent.kafka.serializers AvroSchemaUtils]))
+  (:import [io.confluent.kafka.serializers AvroSchemaUtils]
+           [io.confluent.kafka.serializers.subject.strategy SubjectNameStrategy]
+           [org.apache.avro Schema]))
 
 
 
@@ -82,14 +84,15 @@
        first
        (or (repeat s nil)))))
 
-
-
 (defn subject-name
-  [strategy topic key-or-val]
-  {:pre [(#{:topic-name} strategy) (#{:key :value} key-or-val)]}
+  [strategy topic key-or-val schema-name]
+  {:pre [(#{"io.confluent.kafka.serializers.subject.TopicNameStrategy"
+            "io.confluent.kafka.serializers.subject.RecordNameStrategy"} strategy) (#{:key :value} key-or-val)]}
   (case strategy
-    :topic-name
-    (str topic "-" (name key-or-val))))
+    "io.confluent.kafka.serializers.subject.TopicNameStrategy"
+    (str topic "-" (name key-or-val))
+    "io.confluent.kafka.serializers.subject.RecordNameStrategy"
+    schema-name))
 
 
 
@@ -114,9 +117,9 @@
   [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
     {dst-registry :schema-registry-url {dst-topic :topic-name} :topic
      force-subject-compatibility-level :force-subject-compatibility-level} :destination
-    :keys [mirror-mode subject-naming-strategy]}]
-  (let [src-subject (subject-name subject-naming-strategy src-topic :value)
-        dst-subject (subject-name subject-naming-strategy dst-topic :value)]
+    :keys [mirror-mode value-subject-name-strategy]} schema-name]
+  (let [src-subject (subject-name value-subject-name-strategy src-topic :value schema-name)
+        dst-subject (subject-name value-subject-name-strategy dst-topic :value schema-name)]
     {:source
      {:schema-registry src-registry
       :subject src-subject
@@ -424,10 +427,10 @@
    repair actions required). This is due to the fact that some analysis
    are only executed if the previous problem has been fixed.
   "
-  [{:keys [mirror-mode] :as mirror-cfg}]
+  [{:keys [mirror-mode] :as mirror-cfg} schema-name]
 
   ;; TODO: should we handle avro schemas for keys as well?
-  (let [diff          (compare-subjects mirror-cfg)
+  (let [diff          (compare-subjects mirror-cfg schema-name)
         compatibility (analyse-compatibility diff)]
 
     (or
@@ -473,11 +476,9 @@
 ;; the schemas and repair them.
 ;; -------------------------------------------------------------------
 (defn mirror-schemas
-  [{{src-registry :schema-registry-url {src-topic :topic-name} :topic} :source
-    {dst-registry :schema-registry-url {dst-topic :topic-name} :topic} :destination
-    :keys [mirror-mode subject-naming-strategy] :as mirror}]
+  [mirror schema-name]
 
-  (loop [current-repairs  (analyse-subjetcs mirror)
+  (loop [current-repairs  (analyse-subjetcs mirror schema-name)
          previous-repairs #{}]
 
     (when (seq current-repairs)
@@ -492,7 +493,7 @@
       (run! perform-repair current-repairs)
 
       ;; next round
-      (recur (analyse-subjetcs mirror) (into previous-repairs current-repairs)))))
+      (recur (analyse-subjetcs mirror schema-name) (into previous-repairs current-repairs)))))
 
 
 
@@ -512,7 +513,7 @@
   (def mirror-cfg
     {:name "my-mirror",
      :mirror-mode :strict
-     :subject-naming-strategy :topic-name,
+     :value-subject-name-strategy "io.confluent.kafka.serializers.subject.TopicNameStrategy",
      :source
      {:kafka
       {:bootstrap.servers "broker1:9092",
@@ -532,7 +533,7 @@
 
   ;; create comparison structure
   (def diff
-    (compare-subjects mirror-cfg))
+    (compare-subjects mirror-cfg nil))
 
   ;; compare subjects on several criteria
   (analyse-compatibility diff)
@@ -546,7 +547,7 @@
   ;; analyse differences and propose required changes to the
   ;; destination subject in order to mirror the source this only
   ;; computes the repair actions, but doesn't perform any change
-  (analyse-subjetcs mirror-cfg)
+  (analyse-subjetcs mirror-cfg nil)
 
   ;;
   ;; `mirror-schema` will analyse the subjects and make any necessary

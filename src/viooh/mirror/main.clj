@@ -180,10 +180,11 @@
 
 
 (def DEFAULT-MIRROR-CONFIG
-  {:enabled                 true
-   :mirror-mode             :strict
-   :subject-naming-strategy :topic-name
-   :poll-interval           10000})
+  {:enabled                     true
+   :mirror-mode                 :strict
+   :key-subject-name-strategy   "io.confluent.kafka.serializers.subject.TopicNameStrategy"
+   :value-subject-name-strategy "io.confluent.kafka.serializers.subject.TopicNameStrategy"
+   :poll-interval               10000})
 
 
 

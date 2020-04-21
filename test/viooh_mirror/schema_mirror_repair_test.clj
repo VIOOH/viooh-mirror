@@ -1,6 +1,7 @@
 (ns viooh-mirror.schema-mirror-repair-test
   (:require [viooh.mirror.schema-mirror :refer :all]
-            [midje.sweet :refer :all]))
+            [midje.sweet :refer :all]
+            [viooh.mirror.schema-registry :as sr]))
 
 
 
@@ -761,3 +762,97 @@
  => nil
 
  )
+
+
+(fact
+ " test mirror schema version repair for subject topic name strategy.
+ this test validate that the mirror will mirror the missing schema in the source registry to the target registry
+ in the source ORDER to avoid having incompatible ascending schemas versions"
+
+ (against-background
+  (sr/subject-compatibility "src-reg" "aaa-value") => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility "src-reg") => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility "dst-reg") => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility "dst-reg" "bbb-value") => "FORWARD_TRANSITIVE"
+  (sr/versions "dst-reg" "bbb-value") => [1 2]
+  (sr/versions "src-reg" "aaa-value") => [1 2 3 4]
+  (sr/schema-metadata "dst-reg" "bbb-value" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (sr/schema-metadata "dst-reg" "bbb-value" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata "src-reg" "aaa-value" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (sr/schema-metadata "src-reg" "aaa-value" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata "src-reg" "aaa-value" 3) => {:version 3 :id 3 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata "src-reg" "aaa-value" 4) => {:version 4 :id 4 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  )
+ (->
+  {:name "my-mirror-schema-cfg",
+   :mirror-mode :strict
+   :value-subject-name-strategy "io.confluent.kafka.serializers.subject.TopicNameStrategy",
+   :source
+   {:topic {:topic-name "aaa"},
+    :schema-registry-url "src-reg"},
+
+   :destination
+   {:topic {:topic-name "bbb"},
+    :schema-registry-url "dst-reg"},
+   :serdes [:string :avro]}
+  (compare-subjects "aaa.bbb")
+  analyse-strict-schema-versions)
+ => {:dst 2
+     :dst-schema-registry "dst-reg"
+     :dst-subject "bbb-value"
+     :matches? [true true false false]
+     :missing [(sr/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")
+               (sr/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")]
+
+     :src 4
+     :test false
+     :type :analyse-strict-schema-versions})
+
+
+(fact
+ " test mirror schema version repair for subject record name strategy.
+   this test validate that the mirror will mirror the missing schema in the source registry to the target registry
+   in the source ORDER to avoid having incompatible ascending schemas versions
+ "
+
+ (against-background
+  (sr/subject-compatibility "src-reg" "aaa.bbb") => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility "src-reg") => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility "dst-reg") => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility "dst-reg" "aaa.bbb") => "FORWARD_TRANSITIVE"
+  (sr/versions "dst-reg" "aaa.bbb") => [1 2]
+  (sr/versions "src-reg" "aaa.bbb") => [1 2 3 4]
+  (sr/schema-metadata "dst-reg" "aaa.bbb" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (sr/schema-metadata "dst-reg" "aaa.bbb" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata "src-reg" "aaa.bbb" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (sr/schema-metadata "src-reg" "aaa.bbb" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata "src-reg" "aaa.bbb" 3) => {:version 3 :id 3 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata "src-reg" "aaa.bbb" 4) => {:version 4 :id 4 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  )
+ (->
+  {:name "my-mirror-schema-cfg",
+   :mirror-mode :strict
+   :value-subject-name-strategy "io.confluent.kafka.serializers.subject.RecordNameStrategy",
+   :source
+   {:topic {:topic-name "eee"},
+    :schema-registry-url "src-reg"},
+
+   :destination
+   {:topic {:topic-name "eee"},
+    :schema-registry-url "dst-reg"},
+   :serdes [:string :avro]}
+  (compare-subjects "aaa.bbb")
+  analyse-strict-schema-versions)
+ => {:dst 2
+     :dst-schema-registry "dst-reg"
+     :dst-subject "aaa.bbb"
+     :matches? [true true false false]
+     :missing [(sr/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")
+               (sr/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")]
+
+     :src 4
+     :test false
+     :type :analyse-strict-schema-versions})
+
+
+
