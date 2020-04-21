@@ -17,7 +17,7 @@
             ProducerRecord RecordMetadata]
            [org.apache.kafka.clients.admin AdminClient]
            [org.apache.kafka.common.header Headers]
-           (org.apache.avro Schema)))
+           [org.apache.avro Schema]))
 
 
 

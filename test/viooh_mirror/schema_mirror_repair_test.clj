@@ -765,7 +765,9 @@
 
 
 (fact
- " test mirror schema version repair for subject topic name strategy"
+ " test mirror schema version repair for subject topic name strategy.
+ this test validate that the mirror will mirror the missing schema in the source registry to the target registry
+ in the source ORDER to avoid having incompatible ascending schemas versions"
 
  (against-background
   (sr/subject-compatibility "src-reg" "aaa-value") => "FORWARD_TRANSITIVE"
@@ -808,7 +810,10 @@
 
 
 (fact
- " test mirror schema version repair for subject record name strategy"
+ " test mirror schema version repair for subject record name strategy.
+   this test validate that the mirror will mirror the missing schema in the source registry to the target registry
+   in the source ORDER to avoid having incompatible ascending schemas versions
+ "
 
  (against-background
   (sr/subject-compatibility "src-reg" "aaa.bbb") => "FORWARD_TRANSITIVE"

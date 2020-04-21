@@ -4,8 +4,8 @@
             [viooh.mirror.schema-registry :as sr]
             [com.brunobonacci.mulog :as u])
   (:import [io.confluent.kafka.serializers AvroSchemaUtils]
-           (io.confluent.kafka.serializers.subject.strategy SubjectNameStrategy)
-           (org.apache.avro Schema)))
+           [io.confluent.kafka.serializers.subject.strategy SubjectNameStrategy]
+           [org.apache.avro Schema]))
 
 
 
