@@ -10,6 +10,9 @@
 ;;                                                                            ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(def source-schema-registry ::source-schema-registry)
+(def destination-schema-registry ::destination-schema-registry)
+
 
 (fact
  "analyse-compatibility: if subject compatibility level is specified
@@ -17,7 +20,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry source-schema-registry,
     :subject "source-subject-value",
     :compatibility "FORWARD",
     :global-compatibility "NONE",
@@ -26,7 +29,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -45,7 +48,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry source-schema-registry,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -54,7 +57,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility nil
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -73,7 +76,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -82,7 +85,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility nil
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -91,7 +94,7 @@
      {:id 2, :version 2, :schema :schema2}]}}
   (analyse-compatibility))
 
- => (contains {:dst-schema-registry "destination-schema-registry",
+ => (contains {:dst-schema-registry-client destination-schema-registry,
               :dst-subject "destination-subject-value"}))
 
 
@@ -102,7 +105,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -111,7 +114,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility nil
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -125,7 +128,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -134,7 +137,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -149,7 +152,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "BACKWARD",
     :global-compatibility "NONE",
@@ -158,7 +161,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "BACKWARD",
@@ -172,7 +175,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -181,7 +184,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "BACKWARD_TRANSITIVE",
@@ -208,7 +211,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -217,7 +220,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -239,7 +242,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -248,7 +251,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -269,7 +272,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -278,7 +281,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -300,7 +303,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -309,7 +312,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -338,7 +341,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -347,7 +350,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -368,7 +371,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -377,7 +380,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -400,7 +403,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -409,7 +412,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -433,7 +436,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -444,7 +447,7 @@
      {:id 774, :version 5, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -470,7 +473,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -480,7 +483,7 @@
      {:id 634, :version 4, :schema :schema3}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -509,7 +512,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -518,7 +521,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -539,7 +542,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -548,7 +551,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -571,7 +574,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -580,7 +583,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -604,7 +607,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -614,7 +617,7 @@
      {:id 634, :version 4, :schema :schema3}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -639,7 +642,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -649,7 +652,7 @@
      {:id 634, :version 4, :schema :schema3}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -673,7 +676,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry,
     :subject "source-subject-value",
     :compatibility "NONE",
     :global-compatibility "BACKWARD",
@@ -683,7 +686,7 @@
      {:id 634, :version 4, :schema :schema3}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",

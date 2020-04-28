@@ -3,7 +3,9 @@
             [clojure.tools.logging :as log]
             [viooh.mirror.schema-registry :as sr]
             [com.brunobonacci.mulog :as u])
-  (:import [io.confluent.kafka.serializers AvroSchemaUtils]))
+  (:import [io.confluent.kafka.serializers AvroSchemaUtils]
+           [io.confluent.kafka.serializers.subject.strategy SubjectNameStrategy]
+           [org.apache.avro Schema]))
 
 
 
@@ -82,14 +84,15 @@
        first
        (or (repeat s nil)))))
 
-
-
 (defn subject-name
-  [strategy topic key-or-val]
-  {:pre [(#{:topic-name} strategy) (#{:key :value} key-or-val)]}
+  [strategy topic key-or-val schema-name]
+  {:pre [(#{"io.confluent.kafka.serializers.subject.TopicNameStrategy"
+            "io.confluent.kafka.serializers.subject.RecordNameStrategy"} strategy) (#{:key :value} key-or-val)]}
   (case strategy
-    :topic-name
-    (str topic "-" (name key-or-val))))
+    "io.confluent.kafka.serializers.subject.TopicNameStrategy"
+    (str topic "-" (name key-or-val))
+    "io.confluent.kafka.serializers.subject.RecordNameStrategy"
+    schema-name))
 
 
 
@@ -111,34 +114,34 @@
 (defn compare-subjects
   "It compares the two subjects and returns information about the compatibility,
   the versions and the schemas"
-  [{{src-registry :schema-registry-url src-registry-cfgs :schema-registry-configs {src-topic :topic-name} :topic} :source
-    {dst-registry :schema-registry-url dst-registry-cfgs :schema-registry-configs {dst-topic :topic-name} :topic
+  [{{src-registry-url :schema-registry-url src-registry-cfgs :schema-registry-configs {src-topic :topic-name} :topic} :source
+    {dst-registry-url :schema-registry-url dst-registry-cfgs :schema-registry-configs {dst-topic :topic-name} :topic
      force-subject-compatibility-level :force-subject-compatibility-level} :destination
-    :keys [mirror-mode subject-naming-strategy]}]
-  (let [src-registry-client (sr/schema-registry src-registry dst-registry-cfgs)
-        dst-registry-client (sr/schema-registry dst-registry dst-registry-cfgs)
-        src-subject (subject-name subject-naming-strategy src-topic :value)
-        dst-subject (subject-name subject-naming-strategy dst-topic :value)]
+    :keys [mirror-mode subject-naming-strategy value-subject-name-strategy]} schema-name]
+  (let [src-registry-client (sr/schema-registry src-registry-url src-registry-cfgs)
+        dst-registry-client (sr/schema-registry dst-registry-url dst-registry-cfgs)
+        src-subject (subject-name value-subject-name-strategy src-topic :value schema-name)
+        dst-subject (subject-name value-subject-name-strategy dst-topic :value schema-name)]
     {:source
-     {:schema-registry src-registry
+     {:schema-registry-client src-registry-client
       :subject src-subject
       ;; if the `subject-compatibility-level` for the destination has been
       ;; forced to a specific level, the use the given level
       ;; so that it looks like it was the actual level form the source
       ;; and if repair actions are required will be automatically performed
       :compatibility        (or force-subject-compatibility-level
-                               (sr/subject-compatibility src-registry src-subject))
-      :global-compatibility (sr/subject-compatibility src-registry)
-      :versions (->> (sr/versions src-registry src-subject)
-                   (map (partial sr/schema-metadata src-registry src-subject))
+                               (sr/subject-compatibility src-registry-client src-subject))
+      :global-compatibility (sr/subject-compatibility src-registry-client)
+      :versions (->> (sr/versions src-registry-client src-subject)
+                   (map (partial sr/schema-metadata src-registry-client src-subject))
                    (map #(update % :schema sr/parse-schema)))}
      :destination
-     {:schema-registry dst-registry
+     {:schema-registry-client dst-registry-client
       :subject dst-subject
-      :compatibility        (sr/subject-compatibility dst-registry dst-subject)
-      :global-compatibility (sr/subject-compatibility dst-registry)
-      :versions (->> (sr/versions dst-registry dst-subject)
-                   (map (partial sr/schema-metadata dst-registry dst-subject))
+      :compatibility        (sr/subject-compatibility dst-registry-client dst-subject)
+      :global-compatibility (sr/subject-compatibility dst-registry-client)
+      :versions (->> (sr/versions dst-registry-client dst-subject)
+                   (map (partial sr/schema-metadata dst-registry-client dst-subject))
                    (map #(update % :schema sr/parse-schema)))}}))
 
 
@@ -156,12 +159,12 @@
      src-sr-compt :global-compatibility} :source
     {dst-subject :subject dst-compt :compatibility
      dst-sr-compt :global-compatibility
-     dst-schema-registry :schema-registry} :destination}]
+     dst-schema-registry :schema-registry-client} :destination}]
   (let [src (or src-compt src-sr-compt)
         dst (or dst-compt dst-sr-compt)]
     {:type :analyse-compatibility :test (= src dst)
      :src-level src
-     :dst-schema-registry dst-schema-registry
+     :dst-schema-registry-client dst-schema-registry
      :dst-subject dst-subject
      :dst-level dst}))
 
@@ -172,12 +175,12 @@
   and in the same order."
   [{{src-subject :subject src-versions :versions} :source
     {dst-subject :subject dst-versions :versions
-     dst-schema-registry :schema-registry} :destination}]
+     dst-schema-registry-client :schema-registry-client} :destination}]
   (let [src (mapv :schema src-versions)
         dst (mapv :schema dst-versions)
         s   (max (count src-versions) (count src-versions))]
     {:type  :analyse-strict-schema-versions
-     :dst-schema-registry dst-schema-registry
+     :dst-schema-registry-client dst-schema-registry-client
      :dst-subject dst-subject
      :test (= src dst) :src (count src-versions) :dst (count dst-versions)
      :matches? (mapv #(= %1 %2) (pad s src) (pad s dst))
@@ -191,14 +194,14 @@
   there are other schemas"
   [{{src-subject :subject src-versions :versions} :source
     {dst-subject :subject dst-versions :versions
-     dst-schema-registry :schema-registry} :destination}]
+     dst-schema-registry-client :schema-registry-client} :destination}]
   (let [src (map :schema src-versions)
         dst (map :schema dst-versions)
         dst-match-src (filter (into #{} src) dst)
         missing (remove (into #{} dst) src)
         s   (max (count src) (count dst-match-src))]
     {:type :analyse-schema-versions-lenient
-     :dst-schema-registry dst-schema-registry
+     :dst-schema-registry-client dst-schema-registry-client
      :dst-subject dst-subject
      :test (= src dst-match-src) :src (count src-versions)
      :dst (count dst-versions) :matches? (mapv #(= %1 %2) (pad s src) (pad s dst-match-src))
@@ -212,12 +215,12 @@
   or whether are in a different order"
   [{{src-subject :subject src-versions :versions} :source
     {dst-subject :subject dst-versions :versions
-     dst-schema-registry :schema-registry} :destination}]
+     dst-schema-registry-client :schema-registry-client} :destination}]
   (let [src (into #{} (map :schema src-versions))
         dst (into #{} (map :schema dst-versions))
         missing (difference src dst)]
     {:type :analyse-schema-versions-lenient-unordered
-     :dst-schema-registry dst-schema-registry
+     :dst-schema-registry-client dst-schema-registry-client
      :dst-subject dst-subject
      :test (empty? missing) :src (count src-versions)
      :dst (count dst-versions) :missing missing}))
@@ -241,10 +244,10 @@
 ;; level.
 ;; -------------------------------------------------------------------
 (defmethod repair-actions :analyse-compatibility
-  [{:keys [test dst-schema-registry dst-subject src-level]}]
+  [{:keys [test dst-schema-registry-client dst-subject src-level]}]
   (when-not test
     [{:action :change-subject-compatibility
-      :schema-registry dst-schema-registry
+      :schema-registry-client dst-schema-registry-client
       :subject dst-subject
       :level src-level}]))
 
@@ -272,7 +275,7 @@
 ;; the destination, therefore we raise an error
 ;; -------------------------------------------------------------------
 (defmethod repair-actions :analyse-strict-schema-versions
-  [{:keys [test dst-schema-registry dst-subject src dst matches? missing]
+  [{:keys [test dst-schema-registry-client dst-subject src dst matches? missing]
     :as data}]
   (when-not test
     ;; It can only be repaired if the source has some newer (missing)
@@ -282,7 +285,7 @@
       ;; generate an action for every schema to add
       (map (fn [s]
              {:action :register-schema
-              :schema-registry dst-schema-registry
+              :schema-registry-client dst-schema-registry-client
               :subject dst-subject
               :schema s}) missing)
       ;;
@@ -304,13 +307,13 @@
 ;; request.
 ;; -------------------------------------------------------------------
 (defmethod repair-actions :analyse-schema-versions-lenient-unordered
-  [{:keys [test dst-schema-registry dst-subject src dst missing]
+  [{:keys [test dst-schema-registry-client dst-subject src dst missing]
     :as data}]
   (when (and (not test) (seq missing))
     ;; generate an action for every schema to add
     (map (fn [s]
            {:action :register-schema
-            :schema-registry dst-schema-registry
+            :schema-registry-client dst-schema-registry-client
             :subject dst-subject
             :schema s}) missing)))
 
@@ -330,7 +333,7 @@
 ;; rules) are respected for the given subject.
 ;; -------------------------------------------------------------------
 (defmethod repair-actions :analyse-schema-versions-lenient
-  [{:keys [test dst-schema-registry dst-subject dst missing matches?]
+  [{:keys [test dst-schema-registry-client dst-subject dst missing matches?]
     :as data}]
   (when-not test
     ;; It can only be repaired if the source has some newer (missing)
@@ -346,7 +349,7 @@
       ;; generate an action for every schema to add
       (map (fn [s]
              {:action :register-schema
-              :schema-registry dst-schema-registry
+              :schema-registry-client dst-schema-registry-client
               :subject dst-subject
               :schema s}) missing)
       ;;
@@ -371,43 +374,44 @@
 
 
 (defmethod perform-repair :change-subject-compatibility
-  [{:keys [schema-registry subject level action] :as a}]
+  [{:keys [schema-registry-client subject level action] :as a}]
   (log/info "Performing repair action: " action
-            "on registry:" schema-registry
+            "on registry:" schema-registry-client
             "and subject:" subject
             "setting to level:" level)
   (u/trace ::repair
     [:action :change-subject-compatibility
-     :schema-registry schema-registry
+     :schema-registry-client schema-registry-client
      :subject subject
      :level level]
-    (sr/update-subject-compatibility schema-registry subject level)))
+    (sr/update-subject-compatibility schema-registry-client subject level)))
 
 
 
 (defmethod perform-repair :register-schema
-  [{:keys [schema-registry subject schema action] :as a}]
+  [{:keys [schema-registry-client subject schema action] :as a}]
   (log/info "Performing repair action: " action
-            "on registry:" schema-registry
+            "on registry:" schema-registry-client
             "and subject:" subject
             "schema:" schema)
   (u/trace ::repair
     [:action :register-schema
-     :schema-registry schema-registry
+     :schema-registry-client schema-registry-client
      :subject subject
      :schema (str schema)]
-    (sr/register-schema schema-registry subject schema)))
+    (sr/register-schema schema-registry-client subject schema)))
 
 
 
 (defmethod perform-repair :raise-error
   [{:keys [message] :as a
-    {:keys [dst-schema-registry dst-subject] :as data} :data}]
+    {:keys [dst-schema-registry-client dst-subject] :as data} :data}]
   (log/warn "Repair not possible"
-            "on registry:" dst-schema-registry
+            "on registry:" dst-schema-registry-client
             "and subject:" dst-subject
             "reason:" message)
-  (u/log ::repair :action :raise-error :schema-registry dst-schema-registry
+  (u/log ::repair :action :raise-error
+         :schema-registry-client dst-schema-registry-client
          :subject dst-subject :reason message)
   (throw (ex-info message data)))
 
@@ -426,10 +430,10 @@
    repair actions required). This is due to the fact that some analysis
    are only executed if the previous problem has been fixed.
   "
-  [{:keys [mirror-mode] :as mirror-cfg}]
+  [{:keys [mirror-mode] :as mirror-cfg} schema-name]
 
   ;; TODO: should we handle avro schemas for keys as well?
-  (let [diff          (compare-subjects mirror-cfg)
+  (let [diff          (compare-subjects mirror-cfg schema-name)
         compatibility (analyse-compatibility diff)]
 
     (or
@@ -479,13 +483,11 @@
      {src-topic :topic-name} :topic} :source
     {dst-registry :schema-registry-url dst-registry-cfgs :schema-registry-configs
      {dst-topic :topic-name} :topic} :destination
-    :keys [mirror-mode subject-naming-strategy] :as mirror}]
-
-  (let [src-registry-client (sr/schema-registry src-registry dst-registry-cfgs)
+    :keys [mirror-mode subject-naming-strategy] :as mirror} schema-name]
+  (let [src-registry-client (sr/schema-registry src-registry src-registry-cfgs)
         dst-registry-client (sr/schema-registry dst-registry dst-registry-cfgs)]
-    (loop [current-repairs  (analyse-subjects mirror)
-           previous-repairs #{}]
-
+  (loop [current-repairs  (analyse-subjects mirror schema-name)
+         previous-repairs #{}]
       (when (seq current-repairs)
 
         (let [failed-repairs (filter previous-repairs current-repairs)]
@@ -497,9 +499,8 @@
         ;; attempting repairs
         (run! perform-repair current-repairs)
 
-        ;; next round
-        (recur (analyse-subjects mirror) (into previous-repairs current-repairs))))))
-
+      ;; next round
+        (recur (analyse-subjects mirror schema-name) (into previous-repairs current-repairs))))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -518,7 +519,7 @@
   (def mirror-cfg
     {:name "my-mirror",
      :mirror-mode :strict
-     :subject-naming-strategy :topic-name,
+     :value-subject-name-strategy "io.confluent.kafka.serializers.subject.TopicNameStrategy",
      :source
      {:kafka
       {:bootstrap.servers "broker1:9092",
@@ -538,7 +539,7 @@
 
   ;; create comparison structure
   (def diff
-    (compare-subjects mirror-cfg))
+    (compare-subjects mirror-cfg nil))
 
   ;; compare subjects on several criteria
   (analyse-compatibility diff)
@@ -552,7 +553,7 @@
   ;; analyse differences and propose required changes to the
   ;; destination subject in order to mirror the source this only
   ;; computes the repair actions, but doesn't perform any change
-  (analyse-subjetcs mirror-cfg)
+  (analyse-subjects mirror-cfg nil)
 
   ;;
   ;; `mirror-schema` will analyse the subjects and make any necessary

@@ -1,7 +1,11 @@
 (ns viooh-mirror.schema-mirror-repair-test
   (:require [viooh.mirror.schema-mirror :refer :all]
-            [midje.sweet :refer :all]))
+            [midje.sweet :refer :all]
+            [viooh.mirror.schema-registry :as sr]))
 
+
+(def source-schema-registry-client ::fake-src-client)
+(def destination-schema-registry-client ::fake-dst-client)
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -18,7 +22,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -27,7 +31,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -50,7 +54,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -59,7 +63,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility nil
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -71,7 +75,7 @@
 
  =>
  [{:action :change-subject-compatibility,
-   :schema-registry "destination-schema-registry",
+   :schema-registry-client destination-schema-registry-client,
    :subject "destination-subject-value",
    :level "NONE"}]
 
@@ -93,7 +97,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -102,7 +106,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -125,7 +129,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -134,7 +138,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -158,7 +162,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -169,7 +173,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -181,11 +185,11 @@
 
 
  => [{:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema3}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema4}]
 
@@ -202,7 +206,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -213,7 +217,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -223,19 +227,19 @@
 
 
  => [{:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema1}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema2}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema3}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema4}]
 
@@ -251,7 +255,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -262,7 +266,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -277,7 +281,7 @@
      :message "Strict mirror not possible as source and destination subjects have different schemas",
      :data
      {:type :analyse-strict-schema-versions,
-      :dst-schema-registry "destination-schema-registry",
+      :dst-schema-registry-client destination-schema-registry-client,
       :dst-subject "destination-subject-value",
       :test false,
       :src 4,
@@ -297,7 +301,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -306,7 +310,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -320,7 +324,7 @@
      :message "Strict mirror not possible as source and destination subjects have different schemas",
      :data
      {:type :analyse-strict-schema-versions,
-      :dst-schema-registry "destination-schema-registry",
+      :dst-schema-registry-client destination-schema-registry-client,
       :dst-subject "destination-subject-value",
       :test false,
       :src 2,
@@ -346,7 +350,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -355,7 +359,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -365,9 +369,7 @@
   (analyse-schema-versions-lenient-unordered)
   (repair-actions))
 
- => nil
-
- )
+ => nil)
 
 
 
@@ -379,7 +381,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -390,7 +392,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -401,15 +403,13 @@
   (repair-actions))
 
  => [{:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema3}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
-     :schema :schema4}]
-
- )
+     :schema :schema4}])
 
 
 
@@ -422,7 +422,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -433,7 +433,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -444,11 +444,11 @@
   (repair-actions))
 
  => [{:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema3}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema4}]
 
@@ -465,7 +465,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -476,7 +476,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -489,11 +489,11 @@
   (repair-actions))
 
  => [{:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema3}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema4}]
 
@@ -516,7 +516,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -525,7 +525,7 @@
      {:id 482, :version 2, :schema :schema2}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -549,7 +549,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -560,7 +560,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -571,11 +571,11 @@
   (repair-actions))
 
  => [{:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema3}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema4}]
 
@@ -592,7 +592,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -603,7 +603,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -613,19 +613,19 @@
   (repair-actions))
 
  => [{:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema1}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema2}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema3}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema4}]
 
@@ -642,7 +642,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility "FORWARD_TRANSITIVE",
     :global-compatibility "NONE",
@@ -653,7 +653,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "FORWARD_TRANSITIVE",
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -667,7 +667,7 @@
      :message "Lenient mirror not possible as source and destination subjects don't share a common root set of schemas.",
      :data
      {:type :analyse-schema-versions-lenient,
-      :dst-schema-registry "destination-schema-registry",
+      :dst-schema-registry-client destination-schema-registry-client,
       :dst-subject "destination-subject-value",
       :test false,
       :src 4,
@@ -688,7 +688,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -699,7 +699,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -712,11 +712,11 @@
   (repair-actions))
 
  => [{:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema3}
     {:action :register-schema,
-     :schema-registry "destination-schema-registry",
+     :schema-registry-client destination-schema-registry-client,
      :subject "destination-subject-value",
      :schema :schema4}]
 
@@ -733,7 +733,7 @@
 
  (->>
   {:source
-   {:schema-registry "source-schema-registry",
+   {:schema-registry-client source-schema-registry-client,
     :subject "source-subject-value",
     :compatibility nil,
     :global-compatibility "NONE",
@@ -744,7 +744,7 @@
      {:id 680, :version 4, :schema :schema4}]},
 
    :destination
-   {:schema-registry "destination-schema-registry",
+   {:schema-registry-client destination-schema-registry-client,
     :subject "destination-subject-value",
     :compatibility "NONE"
     :global-compatibility "FORWARD_TRANSITIVE",
@@ -761,3 +761,103 @@
  => nil
 
  )
+
+
+(fact
+ " test mirror schema version repair for subject topic name strategy.
+ this test validate that the mirror will mirror the missing schema in the source registry to the target registry
+ in the source ORDER to avoid having incompatible ascending schemas versions"
+
+ (against-background
+  (sr/schema-registry "src-reg" anything) => ::src-reg
+  (sr/schema-registry "dst-reg" anything) => ::dst-reg
+  (sr/subject-compatibility ::src-reg "aaa-value") => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility ::src-reg) => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility ::dst-reg) => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility ::dst-reg "bbb-value") => "FORWARD_TRANSITIVE"
+  (sr/versions ::dst-reg "bbb-value") => [1 2]
+  (sr/versions ::src-reg "aaa-value") => [1 2 3 4]
+  (sr/schema-metadata ::dst-reg "bbb-value" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (sr/schema-metadata ::dst-reg "bbb-value" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata ::src-reg "aaa-value" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (sr/schema-metadata ::src-reg "aaa-value" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata ::src-reg "aaa-value" 3) => {:version 3 :id 3 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata ::src-reg "aaa-value" 4) => {:version 4 :id 4 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  )
+ (->
+  {:name "my-mirror-schema-cfg",
+   :mirror-mode :strict
+   :value-subject-name-strategy "io.confluent.kafka.serializers.subject.TopicNameStrategy",
+   :source
+   {:topic {:topic-name "aaa"},
+    :schema-registry-url "src-reg"},
+
+   :destination
+   {:topic {:topic-name "bbb"},
+    :schema-registry-url "dst-reg"},
+   :serdes [:string :avro]}
+  (compare-subjects "aaa.bbb")
+  analyse-strict-schema-versions)
+ => {:dst 2
+     :dst-schema-registry-client ::dst-reg
+     :dst-subject "bbb-value"
+     :matches? [true true false false]
+     :missing [(sr/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")
+               (sr/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")]
+
+     :src 4
+     :test false
+    :type :analyse-strict-schema-versions})
+
+
+
+
+(fact
+ " test mirror schema version repair for subject record name strategy.
+   this test validate that the mirror will mirror the missing schema in the source registry to the target registry
+   in the source ORDER to avoid having incompatible ascending schemas versions
+ "
+
+ (against-background
+  (sr/schema-registry "src-reg" anything) => ::src-reg
+  (sr/schema-registry "dst-reg" anything) => ::dst-reg
+  (sr/subject-compatibility ::src-reg "aaa.bbb") => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility ::src-reg) => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility ::dst-reg) => "FORWARD_TRANSITIVE"
+  (sr/subject-compatibility ::dst-reg "aaa.bbb") => "FORWARD_TRANSITIVE"
+  (sr/versions ::dst-reg "aaa.bbb") => [1 2]
+  (sr/versions ::src-reg "aaa.bbb") => [1 2 3 4]
+  (sr/schema-metadata ::dst-reg "aaa.bbb" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (sr/schema-metadata ::dst-reg "aaa.bbb" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata ::src-reg  "aaa.bbb" 1) => {:version 1 :id 1 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }]}"}
+  (sr/schema-metadata ::src-reg "aaa.bbb" 2) => {:version 2 :id 2 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata ::src-reg "aaa.bbb" 3) => {:version 3 :id 3 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  (sr/schema-metadata ::src-reg "aaa.bbb" 4) => {:version 4 :id 4 :schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}"}
+  )
+ (->
+  {:name "my-mirror-schema-cfg",
+   :mirror-mode :strict
+   :value-subject-name-strategy "io.confluent.kafka.serializers.subject.RecordNameStrategy",
+   :source
+   {:topic {:topic-name "eee"},
+    :schema-registry-url "src-reg"},
+
+   :destination
+   {:topic {:topic-name "eee"},
+    :schema-registry-url "dst-reg"},
+   :serdes [:string :avro]}
+  (compare-subjects "aaa.bbb")
+  analyse-strict-schema-versions)
+ => {:dst 2
+     :dst-schema-registry-client ::dst-reg
+     :dst-subject "aaa.bbb"
+     :matches? [true true false false]
+     :missing [(sr/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")
+               (sr/parse-schema "{\"type\" : \"record\", \"namespace\" : \"aaa\", \"name\" : \"bbb\", \"fields\" : [{ \"name\" : \"Name\" , \"type\" : \"string\" }, {\"name\":\"x\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"y\", \"type\":[\"long\", \"null\"], \"default\": 0}, {\"name\":\"z\", \"type\":[\"long\", \"null\"], \"default\": 0}]}")]
+
+     :src 4
+     :test false
+     :type :analyse-strict-schema-versions})
+
+
+

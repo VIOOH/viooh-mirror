@@ -3,6 +3,7 @@
   (:require [viooh.mirror.mirror :as mirror]
             [viooh.mirror.http-server :as http-server]
             [com.brunobonacci.oneconfig :refer [configure deep-merge]]
+            [kafka-ssl-helper.core :as ssl-helper]
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [clojure.java.io :as io]
@@ -179,10 +180,11 @@
 
 
 (def DEFAULT-MIRROR-CONFIG
-  {:enabled                 true
-   :mirror-mode             :strict
-   :subject-naming-strategy :topic-name
-   :poll-interval           10000})
+  {:enabled                     true
+   :mirror-mode                 :strict
+   :key-subject-name-strategy   "io.confluent.kafka.serializers.subject.TopicNameStrategy"
+   :value-subject-name-strategy "io.confluent.kafka.serializers.subject.TopicNameStrategy"
+   :poll-interval               10000})
 
 
 
@@ -201,6 +203,16 @@
   (some->> (io/resource "viooh-mirror.version")
            slurp
            str/trim))
+
+
+
+(defn with-ssl-options
+  "Takes a consumer/producer config and wraps ssl options (keystores, etc...)"
+  [{:keys [private-key ca-cert-pem cert-pem] :as config}]
+  (if (or ca-cert-pem (and private-key cert-pem))
+    (merge (ssl-helper/ssl-opts config)
+           (dissoc config :private-key :cert-pem :ca-cert-pem))
+    config))
 
 
 
@@ -230,7 +242,10 @@
     (update $ :consumer-group-id (fn [cgid]
                                    (or cgid
                                       (format "%s.viooh-mirror.%s"
-                                              (env) (:name $)))))))
+                                              (env) (:name $)))))
+    ;; add SSL configuration to kafka source and destination if necessary
+    (update-in $ [:source :kafka] with-ssl-options)
+    (update-in $ [:destination :kafka] with-ssl-options)))
 
 
 

@@ -156,8 +156,8 @@
 (defn subject-compatibility
   "Given a subject it returns the subject compatibility level or nil if not found.
    Without a subject it returns the default compatibility level"
-  ([{:keys [url client]}]
-   (subject-compatibility url nil))
+  ([{:keys [url client] :as sr}]
+   (subject-compatibility sr nil))
   ([{:keys [url client]} ^String subject]
    (with-circuit-breaker url
      (return-nil-when-not-found
