@@ -9,7 +9,7 @@
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [integrant.core :as ig]
-            [samsara.trackit :refer [track-rate]]
+            [samsara.trackit :refer [track-rate track-count]]
             [com.brunobonacci.mulog :as u])
   (:import [org.apache.kafka.clients.consumer KafkaConsumer]
            [org.apache.kafka.clients.producer KafkaProducer]
@@ -189,6 +189,7 @@
       (log/debugf "[%s] Got %s records" mirror-name (count records))
       (u/log ::messages-polled :num-records (count records))
       (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
+      (track-count (format "vioohmirror.kafka.polls.%s" mirror-name))
 
       ;; send each record to destination kafka/topic
       (->> records
