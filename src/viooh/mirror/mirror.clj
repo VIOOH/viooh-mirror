@@ -184,18 +184,12 @@
   [{:keys [poll-interval] mirror-name :name
     {dest-topic :topic} :destination :as mirror-cfg}
    ^KafkaConsumer c ^KafkaProducer p closed?]
-  (let [is-new-schema? (yield-on-new-value)
-        sleeps         (atom [900000 0 1400000 0])]
+  (let [is-new-schema? (yield-on-new-value)]
     (loop [records (k/poll c poll-interval)]
       (log/debugf "[%s] Got %s records" mirror-name (count records))
       (u/log ::messages-polled :num-records (count records))
       (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
       (track-count (format "vioohmirror.kafka.polls.%s" mirror-name))
-
-      (when (some #(clojure.string/includes? mirror-name %) ["DigitalReservation_MO" "prv_DigitalReservation_IE"])
-        (let [s (or (first @sleeps) 0)
-              _ (swap! sleeps rest)]
-          (Thread/sleep s)))
 
       ;; send each record to destination kafka/topic
       (->> records
