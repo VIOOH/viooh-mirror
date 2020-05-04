@@ -214,6 +214,9 @@
          ;; wait for all the send to be acknowledged before moving forward
          (run! deref))
 
+      ;; track event when the messages have been sent and acknowledged
+      (u/log ::messages-sent :num-records (count records))
+
       ;; commit checkpoint
       (when-not @closed?
 
