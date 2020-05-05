@@ -50,11 +50,23 @@
    :on-error
    :circuit-breaker :kafka-admin-request
    :timeout 60000
+   :max-retries :forever
    :default nil
    :log-stacktrace false
    :message (str "reading status of topic:" topic-name)))
 
 
+(defn- create-topics!
+  [^AdminClient admin-client {:keys [topic-name] :as topic}]
+  (safely
+    (ka/create-topics! admin-client [topic])
+    :on-error
+    :circuit-breaker :kafka-admin-request
+    :timeout 60000
+    :max-retries :forever
+    :default nil
+    :log-stacktrace false
+    :message (str "creating topic:" topic-name)))
 
 (defn ensure-topic!
   "It ensures that the given topic exists in the given kafka cluster.
@@ -72,7 +84,7 @@
      (when-not (describe-topic admin topic)
        (log/infof "Creating topic '%s' in destination cluster" topic-name)
        ;; create topic
-       (ka/create-topics! admin [topic])
+       (create-topics! admin topic)
        (u/log ::topic-created :topic topic-name
               :partition-count partition-count :replication-factor replication-factor))
 
