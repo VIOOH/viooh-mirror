@@ -9,7 +9,7 @@
             [clojure.tools.logging :as log]
             [clojure.string :as str]
             [integrant.core :as ig]
-            [samsara.trackit :refer [track-rate]]
+            [samsara.trackit :refer [track-rate track-count]]
             [com.brunobonacci.mulog :as u])
   (:import [org.apache.kafka.clients.consumer KafkaConsumer]
            [org.apache.kafka.clients.producer KafkaProducer]
@@ -50,11 +50,23 @@
    :on-error
    :circuit-breaker :kafka-admin-request
    :timeout 60000
+   :max-retries :forever
    :default nil
    :log-stacktrace false
    :message (str "reading status of topic:" topic-name)))
 
 
+(defn- create-topics!
+  [^AdminClient admin-client {:keys [topic-name] :as topic}]
+  (safely
+    (ka/create-topics! admin-client [topic])
+    :on-error
+    :circuit-breaker :kafka-admin-request
+    :timeout 60000
+    :max-retries :forever
+    :default nil
+    :log-stacktrace false
+    :message (str "creating topic:" topic-name)))
 
 (defn ensure-topic!
   "It ensures that the given topic exists in the given kafka cluster.
@@ -72,7 +84,7 @@
      (when-not (describe-topic admin topic)
        (log/infof "Creating topic '%s' in destination cluster" topic-name)
        ;; create topic
-       (ka/create-topics! admin [topic])
+       (create-topics! admin topic)
        (u/log ::topic-created :topic topic-name
               :partition-count partition-count :replication-factor replication-factor))
 
@@ -189,6 +201,7 @@
       (log/debugf "[%s] Got %s records" mirror-name (count records))
       (u/log ::messages-polled :num-records (count records))
       (track-rate (format "vioohmirror.messages.poll.%s" mirror-name) (count records))
+      (track-count (format "vioohmirror.kafka.polls.%s" mirror-name))
 
       ;; send each record to destination kafka/topic
       (->> records
@@ -212,6 +225,9 @@
          (doall)
          ;; wait for all the send to be acknowledged before moving forward
          (run! deref))
+
+      ;; track event when the messages have been sent and acknowledged
+      (u/log ::messages-sent :num-records (count records))
 
       ;; commit checkpoint
       (when-not @closed?

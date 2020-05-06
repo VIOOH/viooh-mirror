@@ -34,9 +34,9 @@
                  [com.internetitem/logback-elasticsearch-appender "1.6"]
 
                  ;; observability
-                 [com.brunobonacci/mulog "0.1.8"]
-                 [com.brunobonacci/mulog-elasticsearch "0.1.8"]
-                 [com.brunobonacci/mulog-kafka "0.1.8"]]
+                 [com.brunobonacci/mulog "0.2.0"]
+                 [com.brunobonacci/mulog-elasticsearch "0.2.0"]
+                 [com.brunobonacci/mulog-kafka "0.2.0"]]
 
   :main viooh.mirror.main
 
