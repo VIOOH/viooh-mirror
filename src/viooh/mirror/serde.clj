@@ -16,7 +16,7 @@
   [schema-registry key-subject-name-strategy value-subject-name-strategy]
   (let [sr-url (:url schema-registry)
         sr-configs (:configs schema-registry)]
-    (KafkaAvroSerializer. (:client (r/schema-registry sr-url configs))
+    (KafkaAvroSerializer. (:client (r/schema-registry sr-url sr-configs))
                           (avro-serde-config sr-url sr-configs
                                              key-subject-name-strategy
                                              value-subject-name-strategy))))
@@ -25,7 +25,7 @@
   [schema-registry key-subject-name-strategy value-subject-name-strategy]
   (let [sr-url (:url schema-registry)
         sr-configs (:configs schema-registry)]
-    (KafkaAvroDeserializer. (:client (r/schema-registry sr-url configs))
+    (KafkaAvroDeserializer. (:client (r/schema-registry sr-url sr-configs))
                             (avro-serde-config sr-url
                                                sr-configs
                                                key-subject-name-strategy
