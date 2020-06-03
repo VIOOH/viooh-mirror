@@ -1,6 +1,7 @@
 (ns viooh.mirror.schema-registry
   (:require [clojure.string :as str]
-            [safely.core :refer [safely]])
+            [safely.core :refer [safely]]
+            [clojure.walk :as walk])
   (:import
    [io.confluent.kafka.schemaregistry.client.rest.exceptions RestClientException]
    [io.confluent.kafka.schemaregistry.client SchemaRegistryClient CachedSchemaRegistryClient]
@@ -45,7 +46,7 @@
       (schema-registry-direct url 256 configs))
      ([^String url ^long capacity ^java.util.Map configs]
       {:client (CachedSchemaRegistryClient. url capacity
-                                            (or configs {}))
+                                            (or (walk/stringify-keys configs) {}))
        :url    url}))))
 
 

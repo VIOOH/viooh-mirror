@@ -208,11 +208,16 @@
 
 (defn with-ssl-options
   "Takes a consumer/producer config and wraps ssl options (keystores, etc...)"
-  [{:keys [private-key ca-cert-pem cert-pem] :as config}]
-  (if (or ca-cert-pem (and private-key cert-pem))
-    (merge (ssl-helper/ssl-opts config)
-           (dissoc config :private-key :cert-pem :ca-cert-pem))
-    config))
+  ([{:keys [private-key ca-cert-pem cert-pem] :as config}]
+   (with-ssl-options config nil))
+  ([{:keys [private-key ca-cert-pem cert-pem] :as config} prefix]
+   (if (or ca-cert-pem (and private-key cert-pem))
+     (merge (->> (ssl-helper/ssl-opts config)
+               ;; append prefix
+               (map (juxt (comp keyword (partial str prefix) name key) val))
+               (into {}))
+            (dissoc config :private-key :cert-pem :ca-cert-pem))
+     config)))
 
 
 
@@ -245,7 +250,9 @@
                                               (env) (:name $)))))
     ;; add SSL configuration to kafka source and destination if necessary
     (update-in $ [:source :kafka] with-ssl-options)
-    (update-in $ [:destination :kafka] with-ssl-options)))
+    (update-in $ [:destination :kafka] with-ssl-options)
+    (update-in $ [:source :schema-registry-configs] #(with-ssl-options % "schema.registry."))
+    (update-in $ [:destination :schema-registry-configs] #(with-ssl-options % "schema.registry."))))
 
 
 

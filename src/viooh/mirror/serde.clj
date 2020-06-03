@@ -1,6 +1,8 @@
 (ns viooh.mirror.serde
   (:require [jackdaw.serdes :refer [string-serde]]
-            [viooh.mirror.schema-registry :as r])
+            [clojure.tools.logging :as log]
+            [viooh.mirror.schema-registry :as r]
+            [clojure.walk :as walk])
   (:import [io.confluent.kafka.serializers
             KafkaAvroDeserializer KafkaAvroSerializer]
            [org.apache.kafka.common.serialization Serdes]))
@@ -15,7 +17,7 @@
 (defn- avro-serializer
   [schema-registry key-subject-name-strategy value-subject-name-strategy]
   (let [sr-url (:url schema-registry)
-        sr-configs (:configs schema-registry)]
+        sr-configs (walk/stringify-keys (:configs schema-registry))]
     (KafkaAvroSerializer. (:client (r/schema-registry sr-url sr-configs))
                           (avro-serde-config sr-url sr-configs
                                              key-subject-name-strategy
@@ -24,7 +26,7 @@
 (defn- avro-deserializer
   [schema-registry key-subject-name-strategy value-subject-name-strategy]
   (let [sr-url (:url schema-registry)
-        sr-configs (:configs schema-registry)]
+        sr-configs (walk/stringify-keys (:configs schema-registry))]
     (KafkaAvroDeserializer. (:client (r/schema-registry sr-url sr-configs))
                             (avro-serde-config sr-url
                                                sr-configs
