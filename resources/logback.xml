@@ -1,0 +1,67 @@
+<configuration>
+
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <!-- deny all events with a level below INFO, that is TRACE and DEBUG -->
+    <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+      <level>INFO</level>
+    </filter>
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <if condition='isDefined("ES_LOGGER_URL")'>
+    <then>
+      <appender name="ELASTIC" class="com.internetitem.logback.elasticsearch.ElasticsearchAppender">
+        <url>${ES_LOGGER_URL}/_bulk</url>
+        <index>viooh-mirror-%date{yyyy.MM.dd}</index>
+        <type>log</type>
+        <errorsToStderr>true</errorsToStderr>
+        <headers>
+          <header>
+            <name>Content-Type</name>
+            <value>application/json</value>
+          </header>
+        </headers>
+        <properties>
+          <property>
+            <name>log.class</name>
+            <value>%logger</value>
+          </property>
+          <property>
+            <name>log.level</name>
+            <value>%level</value>
+          </property>
+          <property>
+            <name>thread</name>
+            <value>%thread</value>
+          </property>
+          <property>
+            <name>host.name</name>
+            <value>${HOSTNAME}</value>
+          </property>
+          <property>
+            <name>environment</name>
+            <value>${ENV}</value>
+          </property>
+          <property>
+            <name>exception</name>
+            <value>%xThrowable{full}</value>
+          </property>
+        </properties>
+      </appender>
+    </then>
+  </if>
+
+  <logger name="viooh.mirror.mirror" level="DEBUG" />
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT" />
+    <if condition='isDefined("ES_LOGGER_URL")'>
+      <then>
+        <appender-ref ref="ELASTIC" />
+      </then>
+    </if>
+  </root>
+
+</configuration>
