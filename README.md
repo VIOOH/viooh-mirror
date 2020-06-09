@@ -176,6 +176,65 @@ the schemas are automatically created in the destination cluster.
    }
 ```
 
+### Configuration sample
+
+This configuration connects to a `src-broker*` cluster of 3 seed
+brokers and mirrors two topics `src-topic1` and `src-topic2` into the
+destination cluster `dst-broker*` with two different names
+`dst-topic1` and `dst-topic2`.
+
+Additionally metrics are published to the console, as well as
+***μ/log*** events.
+
+``` clojure
+{:groups
+ [{:group-id-prefix "group1"
+   :source
+   {:kafka
+    {:bootstrap.servers "src-broker1:9092,src-broker2:9092,src-broker3:9092"
+     :max.partition.fetch.bytes "1000000"
+     :max.poll.records "50000"}
+    :schema-registry-url "http://src-registry:8081/"}
+
+   :destination
+   {:kafka
+    {:bootstrap.servers "dst-broker1:9092,dst-broker2:9092,dst-broker3:9092"}
+    :schema-registry-url "http://dst-registry:8081/"}
+
+
+   :mirrors
+   [ ;; mirror the src-topic1 from the src-broker*
+    {:source      {:topic {:topic-name "src-topic1"}}
+     :destination {:topic {:topic-name "dst-topic1"}}
+     ;; [ key-serde value-serde ]
+     :serdes [:string :avro]}
+
+
+    ;; another topic
+    {:source      {:topic {:topic-name "src-topic2"}}
+     :destination {:topic {:topic-name "dst-topic2"}}
+     ;; [ key-serde value-serde ]
+     :serdes [:string :avro]}
+    ]}
+  ]
+
+
+ ;; metrics publishing see https://github.com/samsara/trackit#console
+ :metrics
+ {:type                        :console
+  :reporter-name               "viooh-mirror"
+  :reporting-frequency-seconds 60}
+
+ ;; events publishing see https://github.com/BrunoBonacci/mulog#simple-console-publisher
+ :mulog
+ {:type :multi
+  :publishers
+  [{:type :console}
+   {:type :simple-file
+    :filename "/tmp/mulog/viooh-mirror-events.edn"}]}
+ }
+```
+
 ## Usage
 
 ```
