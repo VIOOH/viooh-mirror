@@ -49,7 +49,7 @@ So far so good, this is what most of the Kafka replication tools do.
 
 * The Problem
 
-The problem that most of the mirroring tool do not consider is that
+The problem that most of the mirroring tools do not consider is that
 the sequence of the messages might not be the same as the sequence of
 the registered schemas.
 
@@ -129,5 +129,5 @@ Since the relative order of the schema is maintained as well, the
 mirroring tool will be able to successfully mirror the messages and
 maintain a mirror of the schemas as well.
 
-This process is fully automated and it will work also if the source
-schema changes of time.
+This process is fully automated and it will also work if the source
+schema changes over time.
