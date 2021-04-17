@@ -8,6 +8,8 @@ _Rotating Kafka's head statue by David Cerny (photo by J.Nosek)_
 Viooh-Mirror an utility to mirror kafka topics across clusters along
 with their schemas.
 
+Here there is a description of [The mirroring problem](./doc/mirroring-problem.org)
+solved by `viooh-mirror`.
 
 ## Configuration
 `viooh-mirror` uses 1config for configuration. For more information

@@ -1,0 +1,133 @@
+#+title: The Mirroring Problem
+
+This article describes the mirroring problem that =viooh-mirror= solves.
+
+Many mirroring tools for Kafka have been built before the
+*Schema-Registry* even existed thus they don't keep into consideration
+the schemas themselves.
+
+* The scenario
+
+Let's assume that:
+
+- We have two clusters: =kafka-src= and =kafka-dst=
+  respectively the source and the destination of the mirroring process.
+
+- Each cluster has an independent *Schema-Registry* installation.
+
+- The topic to be mirrored is called =src-topic= from the =kafka-src=
+  cluster, and it needs to be mirrored into the =dst-topic= of the
+  =kafka-dst= cluster.
+
+- The subject =src-topic-value= tracks the schemas for the
+  =src-topic=, while the subject =dst-topic-value= tracks the schemas
+  for the replicated topic =dst-topic=.
+
+#+CAPTION: Mirroring Scenario
+#+ATTR_HTML: :width 800
+#+ATTR_ORG: :width 800
+[[./images/mirroring-problem.001.jpeg]]
+
+
+A naive mirroring tool might not even know the existence of the
+*Schema-Registry* and just follow a mirroring which is based on the
+messages in the topic.
+
+In the picture above the =src-topic= has three messages all from
+=version 1= of the schema.
+
+As the tool read and deserialises the messages and then re-serialises
+the messages for the destination cluster it will follow the standard
+producer process. For example, if the configured serialiser for the
+destination is =io.confluent.kafka.serializers.KafkaAvroSerializer=,
+then it will contact the destination schema registry and attempt to
+retrieve the ID for the =v1= schema. If this schema is not registered
+in the destination schema registry it will register it, return the id,
+and serialise the message with the new schema id into =dst-topic=.
+
+So far so good, this is what most of the Kafka replication tools do.
+
+* The Problem
+
+The problem that most of the mirroring tool do not consider is that
+the sequence of the messages might not be the same as the sequence of
+the registered schemas.
+
+#+CAPTION: The mirroring problem
+#+ATTR_HTML: :width 800
+#+ATTR_ORG: :width 800
+[[./images/mirroring-problem.002.jpeg]]
+
+
+The above picture shows the same scenario but now we have more
+versions of the schemas.
+
+In the source subject =src-topic-value= we have three version of the
+same schema: =schema-v1=, =schema-v2= and =schema-v3=. For the sake of
+the example we will assume the compatibility level is
+=FORWARD_TRANSITIVE= (the problem exists with all level except with
+the compatibility level =NONE=).
+
+The schema compatibility dictates a specific evolution order of the
+schemas, for example the version =v2= of the schema will need to have
+all the fields of =v1= plus some new fields, and the version =v3= will
+have all the fields of =v1= and =v2= and some additional ones.  The
+=FORWARD_TRANSITIVE= compatibility dictates that each new schemas will
+only have new fields as it is not allowed to remove existing
+fields. This particular compatibility level will allow to update
+Producers before you update consumers.
+
+Messages in the =src-topic= can be of any version of the registered
+schemas. For example, the topic shows the sequence: a message with
+schema =v1=, followed by a message with schema =v3= and then a message
+with schema =v2=.
+
+A naive mirroring tool will consume the messages in order and push them
+in the same order to the destination topic without considering the schemas.
+So here is what will happen in this specific scenario:
+
+  - The first message with the schema =v1= will be replicated and the
+    =schema-v1= registered in the target schema registry.
+  - The second message with schema =v3= will be replicated and the
+    =schema-v3= registered in the target schema registry. This will
+    work because the =schema-v3= contains all the fields of
+    =schema-v1= and more, so it is =FORWARD_TRANSITIVE= compatible.
+  - When the mirroring tool attempts to save the third message with
+    =schema-v2= it will attempt to register the schema into the
+    destination schema registry but *FAIL*!!!  The reason of the
+    failure is that the =schema-v2= has *less* fields than the
+    =schema-v3= thus breaking the =FORWARD_TRANSITIVE= rules.
+
+* The =viooh-mirror= solution
+
+=viooh-mirror= was designed to understand that the sequence of schemas
+*must* be preserved in the target schema registry.
+
+#+CAPTION: The solution
+#+ATTR_HTML: :width 800
+#+ATTR_ORG: :width 800
+[[./images/mirroring-problem.003.jpeg]]
+
+In the same scenario, when the =viooh-mirror= find a new schema (which
+hasn't seen before), it will compare the source subject and the
+destination subject and register *ALL* missing schemas in the exact
+order that they appear in the source subject.
+
+So if the =dst-topic-value= subject is empty, of the first message consumed
+it will replicate *ALL* the source schemas for that subject into the destination
+preserving the relative order.
+
+If =schema-v1= was already present but not =v2= and =v3=, when it
+reads the second message with schema =v3=, it will realise that this
+is a new schema and replicate *in order* the =schema-v2= followed by
+=schema-v3= in the target subject.
+
+It uses caches to make this process efficient and it doesn't need
+constantly check against the schema-registry.
+
+Since the relative order of the schema is maintained as well, the
+mirroring tool will be able to successfully mirror the messages and
+maintain a mirror of the schemas as well.
+
+This process is fully automated and it will work also if the source
+schema changes of time.
