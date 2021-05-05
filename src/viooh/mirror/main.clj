@@ -40,6 +40,14 @@
    ;; the group level will be merged in the individual mirror
    ;; definitions.
    ;;
+
+   ;;
+   ;; An HTTP server endpoint is started with an healthcheck endpoint
+   ;; in order to facilitate cluster deployment.
+   ;;
+   :server {:port 9090 :healthcheck-uri "/healthcheck"}
+
+
    ;; The mirror's name and the consumer group will be automatically
    ;; generated using the :group-id-prefix. The consumer-group-id can
    ;; be overridden.
@@ -328,7 +336,7 @@
 
     (start-metrics! cfg)
     (u/log ::app-started :config-change-num (:change-num config-entry))
-    (ig/init {::http-server/server {}
+    (ig/init {::http-server/server cfg
               ::mirror/mirrors cfg})))
 
 
