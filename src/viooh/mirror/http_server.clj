@@ -22,11 +22,11 @@
 
 
 
-(defmethod ig/init-key ::server [_ _]
+(defmethod ig/init-key ::server [_ {:keys [server]}]
   (let [handler        (api
-                        (GET "/healthcheck" []
+                        (GET (:healthcheck-uri server "/healthcheck") []
                              (resp/response "Spectrum is green" )))
-        stop-server-fn (httpkit/run-server handler {:port 9090})]
+        stop-server-fn (httpkit/run-server handler server)]
     (log/info "http server started")
     stop-server-fn))
 
