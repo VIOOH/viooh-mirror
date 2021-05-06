@@ -38,7 +38,9 @@
                  [com.brunobonacci/mulog               "0.7.1"]
                  [com.brunobonacci/mulog-elasticsearch "0.7.1"]
                  [com.brunobonacci/mulog-kafka         "0.7.1"]
-                 [com.brunobonacci/mulog-cloudwatch    "0.7.1"]]
+                 [com.brunobonacci/mulog-cloudwatch    "0.7.1"]
+                 [com.brunobonacci/mulog-mbean-sampler "0.7.1"]
+                 [com.brunobonacci/mulog-jvm-metrics   "0.7.1"]]
 
   :main viooh.mirror.main
 
