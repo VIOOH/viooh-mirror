@@ -83,7 +83,7 @@ the schemas are automatically created in the destination cluster.
       ;; if necessary you can configure schema-registry auth info.
       ;; :schema-registry-configs
       ;;  {:basic.auth.credentials.source "USER_INFO"
-      ;;  :basic.auth.user.info "<SCHEMA_REG_ACCESS_KEY>:<SCHEMA_REG_SECRET_KEY>"}
+      ;;  :basic.auth.user.info "<SCHEMA_REG_USERNAME>:<SCHEMA_REG_PASSWORD>"}
       }
 
      ;; The information for the destination (where to copy the data).
