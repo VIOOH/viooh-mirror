@@ -96,7 +96,12 @@
     ;;           :max.poll.records "50000"
     ;;           }
     ;;   ;; the url of the schema registry associated with the source kafka cluster
-    ;;   :schema-registry-url "http://source-sr:8081"}
+    ;;   :schema-registry-url "http://source-sr:8081"
+    ;;   ;; if necessary you can configure schema-registry auth info.
+    ;;   ;; :schema-registry-configs
+    ;;   ;;  {:basic.auth.credentials.source "USER_INFO"
+    ;;   ;;  :basic.auth.user.info "<SCHEMA_REG_USERNAME>:<SCHEMA_REG_PASSWORD>"}
+    ;;   }
     ;;
     ;;  ;; The information for the destination (where to copy the data).
     ;;  :destination
@@ -104,7 +109,12 @@
     ;;           :bootstrap.servers "destination:9092"
     ;;           ;; here you might want to add additional producer properties
     ;;           }
-    ;;   :schema-registry-url "http://destinaiton-sr:8081"}
+    ;;   :schema-registry-url "http://destinaiton-sr:8081"
+    ;;   ;; if necessary you can configure schema-registry auth info.
+    ;;   ;; :schema-registry-configs
+    ;;   ;;  {:basic.auth.credentials.source "USER_INFO"
+    ;;   ;;  :basic.auth.user.info "<SCHEMA_REG_ACCESS_KEY>:<SCHEMA_REG_SECRET_KEY>"}
+    ;;   }
     ;;
     ;;  ;; Now in `:mirrors` you can list all the topics (source/dest) to mirror
     ;;  ;; from the above clusters. You can specify additional properties which
