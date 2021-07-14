@@ -72,9 +72,9 @@
   `(try
      ~@body
      (catch RestClientException x#
-       (when-not (or (= 40401 (.getErrorCode x#))
-                     (= 40402 (.getErrorCode x#))
-                     (= 40403 (.getErrorCode x#)))
+       ;; `getErrorCode` returns error codes
+       ;; like: 40401, 40402, 40403, 40408
+       (when-not (= 404 (quot (or (.getErrorCode x#) 0) 100))
          (throw x#)))))
 
 
